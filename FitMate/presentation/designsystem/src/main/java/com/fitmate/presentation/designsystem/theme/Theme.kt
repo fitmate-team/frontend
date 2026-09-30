@@ -5,12 +5,16 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 
 private val FitMateColorScheme = lightColorScheme(
-    primary = Black,
-    background = White,
+    primary = BgBrand,
+    onPrimary = TextOnBrand,
+    background = BgPrimary,
+    onBackground = TextPrimary,
     surface = White,
-    onPrimary = White,
-    onBackground = Black,
-    onSurface = Black
+    onSurface = TextPrimary,
+    onSurfaceVariant = TextSecondary,
+    outline = BorderDefault,
+    error = BgDanger,
+    onError = TextOnDanger
 )
 
 @Composable
