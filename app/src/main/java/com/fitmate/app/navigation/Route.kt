@@ -45,15 +45,13 @@ object Route {
 
     // Workout
     const val WORKOUT_LOCATION = "workout/location"
-    const val WORKOUT_AI_LOADING = "workout/ai-loading"
-    const val WORKOUT_ALT_ROUTINE = "workout/alt-routine"
-    const val WORKOUT_ACTIVE = "workout/active"
-    const val WORKOUT_REST_TIMER = "workout/rest-timer"
-    const val WORKOUT_WEIGHT_RECORD = "workout/weight-record"
-    const val WORKOUT_EVAL = "workout/eval"
-    const val WORKOUT_ANALYSIS = "workout/analysis"
-    const val WORKOUT_ROUTINE_ADJUST = "workout/routine-adjust"
-    const val WORKOUT_ROUTINE_APPLIED = "workout/routine-applied"
+    const val WORKOUT_RECOMMENDATION_LOADING = "workout_recommendation_loading"
+    const val WORKOUT_RECOMMENDATION = "workout_recommendation"
+    const val WORKOUT_PREVIEW = "workout_preview"
+    const val WORKOUT_EXERCISE_SELECT = "workout_exercise_select"
+    const val WORKOUT_EXERCISE_SETTING = "workout_exercise_setting"
+    const val WORKOUT_WEIGHT_SETTING = "workout_weight_setting"
+    const val WORKOUT_PROGRESS = "workout_progress"
 
     // Record
     const val RECORD_WORKOUT_DETAIL = "record/workout-detail"
