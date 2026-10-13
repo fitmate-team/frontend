@@ -287,7 +287,7 @@ fun FitMateNavHost() {
                     },
 
                     onStartWorkout = {
-                        // TODO: 운동 수행 화면 연결
+                        navController.navigate(Route.WORKOUT_PROGRESS)
                     }
                 )
             }
@@ -433,12 +433,11 @@ fun FitMateNavHost() {
                     onBack = {
                         navController.popBackStack()
                     },
-                    onFinish = { totalSeconds ->
-                        // TODO: 운동 기록 저장 및 결과 화면 연결
-                        navController.navigate(Route.WORKOUT) {
-                            popUpTo(Route.WORKOUT) {
-                                inclusive = true
-                            }
+                    onFinish = { _ ->
+                        // 운동 조정 적용 완료 후 홈으로 이동하고 운동 화면 기록 제거
+                        navController.navigate(Route.HOME) {
+                            popUpTo(Route.WORKOUT_PROGRESS) { inclusive = true }
+                            launchSingleTop = true
                         }
                     }
                 )
@@ -696,3 +695,4 @@ fun FitMateNavHost() {
         }
     }
 }
+
