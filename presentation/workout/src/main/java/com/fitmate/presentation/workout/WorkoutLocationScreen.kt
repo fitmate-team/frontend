@@ -6,7 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Place
@@ -71,20 +70,20 @@ fun WorkoutLocationScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(80.dp)
+                .height(68.dp)
                 .padding(horizontal = 24.dp),
 
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
 
             Icon(
-                imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                painter = painterResource(R.drawable.ic_workout_back),
                 contentDescription = "뒤로가기",
                 modifier = Modifier
                     .size(24.dp)
                     .clickable(onClick = onBack),
-                tint = TextPrimary
+                tint = Color.Unspecified
             )
 
             Text(
@@ -181,6 +180,8 @@ fun WorkoutLocationScreen(
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary
                         )
+
+                        Spacer(modifier = Modifier.height(6.dp))
 
                         Text(
                             text = "다양한 머신과 프리웨이트",
