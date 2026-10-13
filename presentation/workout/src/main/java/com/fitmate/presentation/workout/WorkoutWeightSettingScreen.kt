@@ -8,14 +8,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import com.fitmate.presentation.designsystem.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -91,7 +91,7 @@ fun WorkoutWeightSettingScreen(
         ) {
 
             Icon(
-                imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                painter = painterResource(R.drawable.ic_workout_back),
                 contentDescription = "뒤로가기",
                 modifier = Modifier
                     .size(24.dp)
@@ -102,7 +102,7 @@ fun WorkoutWeightSettingScreen(
                             onBack()
                         }
                     },
-                tint = TextPrimary
+                tint = Color.Unspecified
             )
 
             Spacer(modifier = Modifier.width(12.dp))
@@ -149,111 +149,11 @@ fun WorkoutWeightSettingScreen(
 
             Spacer(modifier = Modifier.height(36.dp))
 
-            // 운동 가이드 영상
-            Text(
-                text = "운동 가이드 영상",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = TextPrimary
+            WorkoutGuideContent(
+                guide = exercise.guide,
+                bodyParts = exercise.bodyParts,
+                videoUrl = exercise.videoUrl
             )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(346f / 192f)
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(Color(0xFFE9EEF3)),
-                contentAlignment = Alignment.Center
-            ) {
-
-                Icon(
-                    imageVector = Icons.Rounded.PlayArrow,
-                    contentDescription = "영상 재생",
-                    modifier = Modifier.size(60.dp),
-                    tint = Color(0xFF616B76)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 운동 가이드
-            Text(
-                text = "운동 가이드",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = TextPrimary
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(
-                        width = 1.dp,
-                        color = BorderDefault,
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    .background(
-                        color = Color(0xFFF8F9FA),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    .padding(
-                        horizontal = 16.dp,
-                        vertical = 14.dp
-                    )
-            ) {
-
-                Text(
-                    text = exercise.guide,
-                    fontSize = 14.sp,
-                    lineHeight = 21.sp,
-                    color = TextSecondary
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 주요 운동 부위
-            Text(
-                text = "주요 운동 부위",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = TextPrimary
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-
-                exercise.bodyParts.forEach { bodyPart ->
-
-                    Box(
-                        modifier = Modifier
-                            .border(
-                                width = 1.dp,
-                                color = BorderDefault,
-                                shape = RoundedCornerShape(50)
-                            )
-                            .padding(
-                                horizontal = 18.dp,
-                                vertical = 10.dp
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-
-                        Text(
-                            text = bodyPart,
-                            fontSize = 14.sp,
-                            color = TextPrimary
-                        )
-                    }
-                }
-            }
 
             Spacer(modifier = Modifier.height(32.dp))
 
