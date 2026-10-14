@@ -6,6 +6,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -38,7 +40,8 @@ fun RestTimeButton(
 ) {
     Box(
         modifier = modifier
-            .size(width = 60.dp, height = 36.dp)
+            .defaultMinSize(minWidth = 60.dp)
+            .height(36.dp)
             .clip(RestTimeButtonShape)
             .background(if (selected) Blue100 else White)
             .border(1.dp, if (selected) Blue600 else BorderDefault, RestTimeButtonShape)

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="13.2457dp"
+    android:height="20.2299dp"
+    android:viewportWidth="13.2457"
+    android:viewportHeight="20.2299">
+    <!-- Figma 원본은 오른쪽 화살표이고 좌우 반전해서 사용한다 -->
+    <group
+        android:pivotX="6.62285"
+        android:scaleX="-1">
+        <path
+            android:pathData="M1.00345,1.11494L11.0034,10.1149L1.00345,19.1149"
+            android:strokeWidth="3"
+            android:strokeColor="#16181A" />
+    </group>
+</vector>

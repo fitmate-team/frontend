@@ -1,83 +1,83 @@
 package com.fitmate.presentation.auth
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.fitmate.presentation.designsystem.component.FitMatePrimaryButton
+import com.fitmate.presentation.designsystem.component.FitMateTextField
+import com.fitmate.presentation.designsystem.component.FitMateTitleTopBar
+import com.fitmate.presentation.designsystem.component.TextFieldActionButton
+import com.fitmate.presentation.designsystem.theme.FitMateTheme
+import com.fitmate.presentation.designsystem.theme.Spacing2
+import com.fitmate.presentation.designsystem.theme.Spacing5
 
-private val Blue700 = Color(0xFF3E78AD)
-private val Gray200 = Color(0xFFE2E6EA)
-private val Gray500 = Color(0xFF6C757D)
-private val Gray900 = Color(0xFF16181A)
-private val ScreenBg = Color(0xFFF8F9FA)
-
+// 1.1 회원가입 (계정 정보)
 @Composable
 fun SignupIntroScreen(
     onBack: () -> Unit,
-    onNext: () -> Unit
+    onNext: () -> Unit,
+    onCheckDuplicateId: (String) -> Unit = {}
 ) {
     var id by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordConfirm by remember { mutableStateOf("") }
 
-    Column(modifier = Modifier.fillMaxSize().background(ScreenBg)) {
-        Row(
-            modifier = Modifier.fillMaxWidth().height(80.dp).padding(horizontal = 20.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로", tint = Gray900)
+    SignupScaffold(
+        topBar = { FitMateTitleTopBar(title = "회원가입", onBack = onBack) },
+        title = "FitMate를\n시작해볼까요?",
+        bottomBar = { FitMatePrimaryButton(text = "다음", onClick = onNext) }
+    ) {
+        FitMateTextField(
+            value = id,
+            onValueChange = { id = it },
+            placeholder = "아이디",
+            leadingIcon = Icons.Outlined.Person,
+            endPadding = Spacing2,
+            trailingContent = {
+                TextFieldActionButton(text = "중복확인", onClick = { onCheckDuplicateId(id) })
             }
-            Text("회원가입", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Gray900)
-        }
+        )
+        Spacer(modifier = Modifier.height(Spacing2))
+        SignupHelperText(text = "아이디는 8~16자로 입력해주세요.")
 
-        Column(modifier = Modifier.weight(1f).padding(20.dp)) {
-            Text("FitMate를\n시작해볼까요?", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Gray900)
-            Column(modifier = Modifier.padding(top = 30.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                Column {
-                    OutlinedTextField(value = id, onValueChange = { id = it }, placeholder = { Text("아이디") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                    Text("아이디는 8~16자", fontSize = 12.sp, color = Gray500, modifier = Modifier.padding(top = 6.dp, start = 4.dp))
-                }
-                Column {
-                    OutlinedTextField(value = password, onValueChange = { password = it }, placeholder = { Text("비밀번호") }, singleLine = true, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
-                    Text("비밀번호는 영문, 숫자를 포함해 10자 이상", fontSize = 12.sp, color = Gray500, modifier = Modifier.padding(top = 6.dp, start = 4.dp))
-                }
-                OutlinedTextField(value = passwordConfirm, onValueChange = { passwordConfirm = it }, placeholder = { Text("비밀번호 확인") }, singleLine = true, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
-            }
-        }
+        Spacer(modifier = Modifier.height(Spacing5))
+        FitMateTextField(
+            value = password,
+            onValueChange = { password = it },
+            placeholder = "비밀번호",
+            leadingIcon = Icons.Outlined.Lock,
+            isPassword = true,
+            height = 51.dp
+        )
+        Spacer(modifier = Modifier.height(Spacing2))
+        SignupHelperText(text = "비밀번호는 영문, 숫자를 포함해 10자 이상으로 입력해주세요.")
 
-        Button(
-            onClick = onNext,
-            colors = ButtonDefaults.buttonColors(containerColor = Blue700),
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 24.dp).height(52.dp)
-        ) {
-            Text("다음", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-        }
+        Spacer(modifier = Modifier.height(Spacing5))
+        FitMateTextField(
+            value = passwordConfirm,
+            onValueChange = { passwordConfirm = it },
+            placeholder = "비밀번호 확인",
+            leadingIcon = Icons.Outlined.Lock,
+            isPassword = true,
+            height = 51.dp
+        )
+    }
+}
+
+@Preview(widthDp = 394, heightDp = 892)
+@Composable
+private fun SignupIntroScreenPreview() {
+    FitMateTheme {
+        SignupIntroScreen(onBack = {}, onNext = {})
     }
 }

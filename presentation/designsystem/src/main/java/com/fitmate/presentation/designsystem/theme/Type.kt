@@ -10,20 +10,38 @@ import androidx.compose.ui.unit.sp
 // 컴포넌트 폰트 (GamtanRoad Dotum). 폰트 파일 추가 전까지 기본 폰트 사용
 val FitMateFontFamily: FontFamily = FontFamily.Default
 
-// 숫자 강조 폰트 (Wavve PADO). 폰트 파일 추가 전까지 기본 폰트 사용
+// 타이틀 / 버튼 / 숫자 강조 폰트 (Wavve PADO). 폰트 파일 추가 전까지 기본 폰트 사용
 val FitMateNumberFontFamily: FontFamily = FontFamily.Default
 
-internal fun fitMateTextStyle(
+// Wavve PADO는 Regular 한 굵기뿐이지만 획이 두껍다.
+// 기본 폰트로 대체하는 동안은 Bold로 비슷한 두께를 내고, 폰트 파일을 추가하면 Normal로 바꾼다.
+val FitMateNumberFontWeight: FontWeight = FontWeight.Bold
+
+fun fitMateTextStyle(
     fontSize: TextUnit,
     lineHeight: TextUnit,
     fontWeight: FontWeight = FontWeight.Normal,
-    fontFamily: FontFamily = FitMateFontFamily
+    fontFamily: FontFamily = FitMateFontFamily,
+    letterSpacing: TextUnit = 0.sp
 ) = TextStyle(
     fontFamily = fontFamily,
     fontWeight = fontWeight,
     fontSize = fontSize,
     lineHeight = lineHeight,
-    letterSpacing = 0.sp
+    letterSpacing = letterSpacing
+)
+
+// Wavve PADO 텍스트 (화면 타이틀, 버튼 라벨)
+fun fitMateDisplayTextStyle(
+    fontSize: TextUnit,
+    lineHeight: TextUnit,
+    letterSpacing: TextUnit = 0.sp
+) = fitMateTextStyle(
+    fontSize = fontSize,
+    lineHeight = lineHeight,
+    fontWeight = FitMateNumberFontWeight,
+    fontFamily = FitMateNumberFontFamily,
+    letterSpacing = letterSpacing
 )
 
 // Roboto = Android 기본 폰트

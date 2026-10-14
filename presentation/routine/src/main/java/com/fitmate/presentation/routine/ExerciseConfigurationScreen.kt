@@ -1,9 +1,9 @@
 package com.fitmate.presentation.routine
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,20 +11,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -32,161 +21,149 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.fitmate.presentation.designsystem.component.ExerciseChip
+import com.fitmate.presentation.designsystem.component.FitMatePrimaryButton
+import com.fitmate.presentation.designsystem.component.FitMateTitleTopBar
+import com.fitmate.presentation.designsystem.component.FormFieldLabel
+import com.fitmate.presentation.designsystem.component.IntensityField
+import com.fitmate.presentation.designsystem.component.RestTimeButton
+import com.fitmate.presentation.designsystem.component.WorkoutIntensityInput
+import com.fitmate.presentation.designsystem.theme.Blue100
+import com.fitmate.presentation.designsystem.theme.Blue200
+import com.fitmate.presentation.designsystem.theme.Blue700
+import com.fitmate.presentation.designsystem.theme.Blue900
+import com.fitmate.presentation.designsystem.theme.FitMateTheme
+import com.fitmate.presentation.designsystem.theme.Spacing1
+import com.fitmate.presentation.designsystem.theme.Spacing2
+import com.fitmate.presentation.designsystem.theme.Spacing3
+import com.fitmate.presentation.designsystem.theme.Spacing4
+import com.fitmate.presentation.designsystem.theme.Spacing5
+import com.fitmate.presentation.designsystem.theme.Spacing6
+import com.fitmate.presentation.designsystem.theme.TextSecondary
+import com.fitmate.presentation.designsystem.theme.White
+import com.fitmate.presentation.designsystem.theme.fitMateTextStyle
 
-private val FitMateBlue = Color(0xFF3E78AD)
-private val ScreenBackground = Color(0xFFF8F9FA)
-private val CardBorder = Color(0xFFE2E6EA)
-private val TextMuted = Color(0xFF6C757D)
-private val InfoBg = Color(0xFFDBE9F5)
+private val AiRecommendShape = RoundedCornerShape(14.dp)
 
-private val restOptions = listOf("30초", "60초", "90초", "2분", "3분")
-
+// 3.7 운동 상세 설정. 위쪽 탭으로 고른 운동을 오가며 세트 / 횟수 / 중량 / 휴식을 입력한다
+// 마지막 운동에서 다음을 누르면 설정 전체를 돌려준다
 @Composable
 fun ExerciseConfigurationScreen(
-    exercises: List<String> = listOf("벤치프레스", "인클라인 덤벨프레스", "체스트프레스", "숄더프레스"),
+    exercises: List<String> = AiRecommendedExerciseNames,
+    initialSettings: List<ExerciseSetting> = emptyList(),
     onBack: () -> Unit = {},
-    onSave: () -> Unit = {}
+    onDone: (List<ExerciseSetting>) -> Unit = {}
 ) {
-    var selectedExercise by remember { mutableStateOf(exercises.firstOrNull() ?: "벤치프레스") }
-    var sets by remember { mutableIntStateOf(4) }
-    var reps by remember { mutableIntStateOf(10) }
-    var weight by remember { mutableIntStateOf(40) }
-    var restIndex by remember { mutableStateOf(2) }
-
-    Column(modifier = Modifier.fillMaxSize().background(ScreenBackground)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack, modifier = Modifier.padding(4.dp)) {
-                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
-            }
-            Text(text = "운동 설정", fontWeight = FontWeight.Medium, fontSize = MaterialTheme.typography.titleMedium.fontSize)
-        }
-
-        Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                exercises.forEach { exercise ->
-                    val selected = exercise == selectedExercise
-                    Surface(
-                        shape = RoundedCornerShape(100.dp),
-                        color = if (selected) InfoBg else Color.White,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, if (selected) FitMateBlue else CardBorder),
-                        onClick = { selectedExercise = exercise }
-                    ) {
-                        Text(
-                            text = exercise,
-                            color = if (selected) FitMateBlue else TextMuted,
-                            fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
-                            fontSize = MaterialTheme.typography.labelMedium.fontSize,
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                color = Color.White,
-                border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder)
-            ) {
-                Row(modifier = Modifier.padding(16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    NumberStepper(label = "세트", suffix = "세트", value = sets, onChange = { sets = it.coerceAtLeast(1) })
-                    NumberStepper(label = "횟수", suffix = "회", value = reps, onChange = { reps = it.coerceAtLeast(1) })
-                    NumberStepper(label = "중량", suffix = "kg", value = weight, onChange = { weight = it.coerceAtLeast(0) })
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                color = Color.White,
-                border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(text = "휴식 시간", color = TextMuted, fontWeight = FontWeight.Medium, fontSize = MaterialTheme.typography.labelMedium.fontSize)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        restOptions.forEachIndexed { index, option ->
-                            val selected = index == restIndex
-                            Surface(
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(10.dp),
-                                color = if (selected) InfoBg else ScreenBackground,
-                                border = androidx.compose.foundation.BorderStroke(1.dp, if (selected) FitMateBlue else CardBorder),
-                                onClick = { restIndex = index }
-                            ) {
-                                Box(contentAlignment = Alignment.Center, modifier = Modifier.height(36.dp).fillMaxWidth()) {
-                                    Text(text = option, color = if (selected) FitMateBlue else TextMuted, fontSize = MaterialTheme.typography.labelMedium.fontSize)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
-                color = InfoBg,
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF9BC0DE))
-            ) {
-                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
-                    Text(text = "AI 추천 — $selectedExercise", color = Color(0xFF294767), fontWeight = FontWeight.Medium, fontSize = MaterialTheme.typography.labelMedium.fontSize)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(text = "4세트 · 8회 · 42.5kg · 휴식 90초", color = Color(0xFF27384A), fontSize = MaterialTheme.typography.bodySmall.fontSize)
-                    Text(text = "최근 4회 평균 성공률 94%를 기준으로 추천해요.", color = TextMuted, fontSize = MaterialTheme.typography.labelMedium.fontSize)
-                }
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-
-        Column(modifier = Modifier.background(ScreenBackground).padding(20.dp)) {
-            Button(
-                onClick = onSave,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = FitMateBlue),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text(text = "저장하기")
-            }
-        }
+    var settings by remember {
+        mutableStateOf(exercises.map { name -> initialSettings.firstOrNull { it.name == name } ?: ExerciseSetting(name) })
     }
-}
+    var currentIndex by remember { mutableIntStateOf(0) }
+    val current = settings[currentIndex]
 
-@Composable
-private fun NumberStepper(label: String, suffix: String, value: Int, onChange: (Int) -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(text = label, color = TextMuted, fontSize = MaterialTheme.typography.labelSmall.fontSize)
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            StepButton(icon = Icons.Filled.Remove, onClick = { onChange(value - 1) })
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = "$value", fontWeight = FontWeight.Medium, fontSize = MaterialTheme.typography.titleMedium.fontSize)
-                Text(text = suffix, color = TextMuted, fontSize = MaterialTheme.typography.labelSmall.fontSize)
-            }
-            StepButton(icon = Icons.Filled.Add, onClick = { onChange(value + 1) })
-        }
+    fun update(transform: (ExerciseSetting) -> ExerciseSetting) {
+        settings = settings.toMutableList().also { it[currentIndex] = transform(it[currentIndex]) }
     }
-}
 
-@Composable
-private fun StepButton(icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
-    Surface(
-        modifier = Modifier.size(28.dp),
-        shape = RoundedCornerShape(7.dp),
-        color = Color.White,
-        border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder),
-        onClick = onClick
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(White)
     ) {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-            Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(16.dp))
+        FitMateTitleTopBar(title = "운동 설정", onBack = onBack) {
+            Row(
+                modifier = Modifier
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = Spacing6),
+                horizontalArrangement = Arrangement.spacedBy(Spacing1)
+            ) {
+                settings.forEachIndexed { index, setting ->
+                    ExerciseChip(
+                        text = shortNameOf(setting.name),
+                        selected = index == currentIndex,
+                        onClick = { currentIndex = index }
+                    )
+                }
+            }
         }
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = Spacing6)
+        ) {
+            Spacer(modifier = Modifier.height(Spacing5))
+            FormFieldLabel(text = "운동 세부 강도 설정")
+            Spacer(modifier = Modifier.height(Spacing3))
+            WorkoutIntensityInput(
+                fields = listOf(
+                    IntensityField("세트", current.sets, { value -> update { it.copy(sets = value) } }),
+                    IntensityField("횟수", current.reps, { value -> update { it.copy(reps = value) } }),
+                    IntensityField("중량(kg)", current.weight, { value -> update { it.copy(weight = value) } }, KeyboardType.Decimal)
+                )
+            )
+            Spacer(modifier = Modifier.height(Spacing6))
+            FormFieldLabel(text = "휴식 시간")
+            Spacer(modifier = Modifier.height(Spacing3))
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing2)) {
+                RestTimeOptions.forEach { option ->
+                    RestTimeButton(
+                        text = option,
+                        selected = current.rest == option,
+                        onClick = { update { it.copy(rest = option) } },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(29.dp))
+            AiRecommendBox(exerciseName = shortNameOf(current.name))
+            Spacer(modifier = Modifier.height(Spacing6))
+        }
+        FitMatePrimaryButton(
+            text = "다음",
+            onClick = {
+                if (currentIndex < settings.lastIndex) currentIndex += 1 else onDone(settings)
+            },
+            modifier = Modifier.padding(start = Spacing6, end = Spacing6, bottom = Spacing6)
+        )
+    }
+}
+
+// AI 추천 값 안내 (예시 값)
+@Composable
+private fun AiRecommendBox(exerciseName: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(AiRecommendShape)
+            .background(Blue100)
+            .border(1.dp, Blue200, AiRecommendShape)
+            .padding(horizontal = Spacing4, vertical = 14.dp)
+    ) {
+        Text(text = "AI 추천 — $exerciseName", style = fitMateTextStyle(12.sp, 18.sp, FontWeight.Bold), color = Blue700)
+        Text(text = "4세트 · 8회 · 42.5kg · 휴식 90초", style = fitMateTextStyle(13.sp, 20.sp), color = Blue900)
+        Text(text = "최근 4회 평균 성공률 94%를 기준으로 추천해요.", style = fitMateTextStyle(12.sp, 20.sp), color = TextSecondary)
+    }
+}
+
+@Preview(name = "입력 전", widthDp = 394, heightDp = 892)
+@Composable
+private fun ExerciseConfigurationScreenPreview() {
+    FitMateTheme { ExerciseConfigurationScreen() }
+}
+
+@Preview(name = "입력 후", widthDp = 394, heightDp = 892)
+@Composable
+private fun ExerciseConfigurationScreenFilledPreview() {
+    FitMateTheme {
+        ExerciseConfigurationScreen(
+            initialSettings = listOf(ExerciseSetting("벤치 프레스", sets = "4", reps = "10", weight = "40", rest = "60초"))
+        )
     }
 }
