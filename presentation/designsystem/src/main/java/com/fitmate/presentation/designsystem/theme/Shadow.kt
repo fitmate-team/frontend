@@ -14,7 +14,8 @@ import androidx.compose.ui.unit.dp
 data class FitMateShadow(
     val offsetY: Dp,
     val blur: Dp,
-    val alpha: Float
+    val alpha: Float,
+    val color: Color = Color.Black
 )
 
 val ShadowSmall = FitMateShadow(offsetY = 2.dp, blur = 8.dp, alpha = 0.08f)  // 플로팅 요소
@@ -30,7 +31,7 @@ fun Modifier.fitMateShadow(shadow: FitMateShadow, cornerRadius: Dp) = drawBehind
                 shadow.blur.toPx() / 2,
                 0f,
                 shadow.offsetY.toPx(),
-                Color.Black.copy(alpha = shadow.alpha).toArgb()
+                shadow.color.copy(alpha = shadow.alpha).toArgb()
             )
         }
         val radius = cornerRadius.toPx()

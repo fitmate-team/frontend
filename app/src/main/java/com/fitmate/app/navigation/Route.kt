@@ -9,15 +9,16 @@ object Route {
 
     // Auth / signup wizard
     const val LOGIN = "login"
-    const val AI_TRAINER_INTRO = "signup/intro"
+    // 회원가입 단계 화면을 묶는 그래프. 그래프 범위로 SignupViewModel을 공유한다
+    const val SIGNUP_GRAPH = "signup"
     const val SIGNUP_CREDENTIALS = "signup/credentials"
+    const val AI_TRAINER_INTRO = "signup/intro"
     const val BASIC_BODY_INFO = "signup/basic-body-info"
     const val OPTIONAL_BODY_INFO = "signup/optional-body-info"
     const val EXERCISE_EXPERIENCE = "signup/exercise-experience"
     const val WORKOUT_GOAL = "signup/workout-goal"
-    const val DETAILED_GOAL = "signup/detailed-goal"
+    const val WORKOUT_METHOD = "signup/workout-method"
     const val WORKOUT_SCHEDULE = "signup/workout-schedule"
-    const val WORKOUT_DURATION = "signup/workout-duration"
     const val WORKOUT_ENVIRONMENT = "signup/workout-environment"
     const val GYM_EQUIPMENT = "signup/gym-equipment"
     const val HOME_EQUIPMENT = "signup/home-equipment"
@@ -25,9 +26,7 @@ object Route {
     const val EXERCISE_RESTRICTIONS = "signup/exercise-restrictions"
     const val EXERCISE_SEARCH = "signup/exercise-search"
     const val EXERCISE_ABILITY = "signup/exercise-ability"
-    const val AI_ANALYSIS_LOADING = "signup/ai-analysis-loading"
-    const val AI_ROUTINE_RESULT = "signup/ai-routine-result"
-    const val AI_RECOMMENDATION_REASON = "signup/ai-recommendation-reason"
+    const val EXERCISE_RECORD_SEARCH = "signup/exercise-record-search"
 
     // Home
     const val WATCH_SYNC_RESULT = "home/watch-sync-result"
@@ -35,9 +34,14 @@ object Route {
     // Routine
     const val ROUTINE_CREATE_METHOD = "routine/create-method"
     const val ROUTINE_AI_HANDSOFF_SETUP = "routine/ai-handsoff-setup"
+    const val ROUTINE_PLACE_CHANGE = "routine/place-change"
+    const val ROUTINE_SCHEDULE_CHANGE = "routine/schedule-change"
     const val ROUTINE_AI_LOADING = "routine/ai-loading"
     const val ROUTINE_AI_RESULT = "routine/ai-result"
     const val ROUTINE_AI_REASON = "routine/ai-reason"
+    const val ROUTINE_AI_DAY_PREVIEW = "routine/ai-day-preview"
+    const val ROUTINE_MANUAL_AI_LOADING = "routine/manual-ai-loading"
+    const val ROUTINE_MANUAL_DAY_DETAIL = "routine/manual-day-detail"
     const val ROUTINE_MANUAL_DAY_SELECT = "routine/manual-day-select"
     const val ROUTINE_MANUAL_EXERCISE_SELECT = "routine/manual-exercise-select"
     const val ROUTINE_EXERCISE_CONFIG = "routine/exercise-config"

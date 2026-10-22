@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -33,7 +34,8 @@ fun ExerciseChip(
     text: String,
     selected: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    unselectedTextColor: Color = TextPrimary
 ) {
     Box(
         modifier = modifier
@@ -52,7 +54,7 @@ fun ExerciseChip(
                 lineHeight = 21.sp,
                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
             ),
-            color = if (selected) Blue600 else TextPrimary
+            color = if (selected) Blue600 else unselectedTextColor
         )
     }
 }

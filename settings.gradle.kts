@@ -21,6 +21,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "FitMate"
 include(":app")
+include(":wear")
 include(":domain")
 include(":data")
 include(":presentation:designsystem")

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <!-- 17.6x18.8 아이콘을 48x48 컨테이너 중앙에 배치 -->
+    <group
+        android:translateX="15.2007"
+        android:translateY="14.5962">
+        <path
+            android:pathData="M13.9989,1L16.5986,3.52114L13.9989,6.04229M3.59977,17.8076L1,15.2865L3.59977,12.7653"
+            android:strokeWidth="2"
+            android:strokeColor="#A7AEB3"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M16.5986,3.52114H7.06614C5.4573,3.52114 3.91435,4.14092 2.77673,5.24414C1.63911,6.34735 1,7.84363 1,9.40381M1,15.2865H10.5325C12.1413,15.2865 13.6843,14.6667 14.8219,13.5635C15.9595,12.4603 16.5986,10.964 16.5986,9.40381"
+            android:strokeWidth="2"
+            android:strokeColor="#A7AEB3"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+    </group>
+</vector>

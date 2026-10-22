@@ -39,24 +39,39 @@ val FitMateNumberFontFamily = FontFamily(
     )
 )
 
+// Wavve PADO는 Regular 한 굵기뿐이다 (획이 두꺼워 Normal로 충분하다)
+val FitMateNumberFontWeight: FontWeight = FontWeight.Normal
+
 // ========================================
 // 3. 공통 TextStyle 생성 함수
 // ========================================
 
-internal fun fitMateTextStyle(
+fun fitMateTextStyle(
     fontSize: TextUnit,
     lineHeight: TextUnit,
     fontWeight: FontWeight = FontWeight.Normal,
-    fontFamily: FontFamily = FitMateFontFamily
-): TextStyle {
-    return TextStyle(
-        fontFamily = fontFamily,
-        fontWeight = fontWeight,
-        fontSize = fontSize,
-        lineHeight = lineHeight,
-        letterSpacing = 0.sp
-    )
-}
+    fontFamily: FontFamily = FitMateFontFamily,
+    letterSpacing: TextUnit = 0.sp
+) = TextStyle(
+    fontFamily = fontFamily,
+    fontWeight = fontWeight,
+    fontSize = fontSize,
+    lineHeight = lineHeight,
+    letterSpacing = letterSpacing
+)
+
+// Wavve PADO 텍스트 (화면 타이틀, 버튼 라벨)
+fun fitMateDisplayTextStyle(
+    fontSize: TextUnit,
+    lineHeight: TextUnit,
+    letterSpacing: TextUnit = 0.sp
+) = fitMateTextStyle(
+    fontSize = fontSize,
+    lineHeight = lineHeight,
+    fontWeight = FitMateNumberFontWeight,
+    fontFamily = FitMateNumberFontFamily,
+    letterSpacing = letterSpacing
+)
 
 // ========================================
 // 4. FitMate Typography

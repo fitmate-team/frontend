@@ -57,6 +57,7 @@ dependencies {
     implementation(project(":presentation:workout"))
     implementation(project(":presentation:record"))
     implementation(project(":presentation:mypage"))
+    implementation(project(":domain"))
     implementation(project(":data"))
 
     implementation("androidx.compose.material:material-icons-extended")
@@ -73,6 +74,8 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.hilt.navigation.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
