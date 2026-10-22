@@ -14,10 +14,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.fitmate.presentation.auth.AIAnalysisLoadingScreen
 import com.fitmate.presentation.auth.AIRecommendationReasonScreen
 import com.fitmate.presentation.auth.AIRoutineResultScreen
@@ -62,17 +64,17 @@ import com.fitmate.presentation.routine.RoutineAiResultScreen
 import com.fitmate.presentation.routine.RoutineCreationMethodScreen
 import com.fitmate.presentation.routine.RoutineScreen
 import com.fitmate.presentation.routine.WorkoutDetailScreen
-import com.fitmate.presentation.workout.ActiveWorkoutScreen
-import com.fitmate.presentation.workout.AltRoutineScreen
-import com.fitmate.presentation.workout.RestTimerScreen
-import com.fitmate.presentation.workout.RoutineAdjustScreen
-import com.fitmate.presentation.workout.RoutineAppliedScreen
-import com.fitmate.presentation.workout.TodayAnalysisScreen
-import com.fitmate.presentation.workout.WeightRecordScreen
-import com.fitmate.presentation.workout.WorkoutAiLoadingScreen
-import com.fitmate.presentation.workout.WorkoutEvalScreen
+import com.fitmate.presentation.workout.SelectableExercise
 import com.fitmate.presentation.workout.WorkoutLocationScreen
-import com.fitmate.presentation.workout.WorkoutScreen
+import com.fitmate.presentation.workout.WorkoutPlace
+import com.fitmate.presentation.workout.WorkoutRecommendationLoadingScreen
+import com.fitmate.presentation.workout.WorkoutRecommendationScreen
+import com.fitmate.presentation.workout.TodayWorkoutScreen
+import com.fitmate.presentation.workout.WorkoutExerciseSelectScreen
+import com.fitmate.presentation.workout.WorkoutExerciseSettingScreen
+import com.fitmate.presentation.workout.WorkoutProgressScreen
+import com.fitmate.presentation.workout.WorkoutWeightSettingScreen
+
 
 @Composable
 fun FitMateNavHost() {
@@ -136,7 +138,7 @@ fun FitMateNavHost() {
 
         NavHost(
             navController = navController,
-            startDestination = Route.LOGIN,
+            startDestination = Route.WORKOUT,
             modifier = Modifier.padding(innerPadding),
 
             // 화면 전환 애니메이션 제거
@@ -263,100 +265,184 @@ fun FitMateNavHost() {
                 )
             }
 
+            // 오늘의 운동
             composable(Route.WORKOUT) {
-                WorkoutScreen(
-                    onBack = { navController.popBackStack() },
-                    onChangeLocation = { navController.navigate(Route.WORKOUT_LOCATION) },
-                    onStartWorkout = { navController.navigate(Route.WORKOUT_ACTIVE) }
-                )
-            }
+                TodayWorkoutScreen(
+                    onChangeLocation = {
+                        navController.navigate(Route.WORKOUT_LOCATION)
+                    },
 
-            composable(Route.WORKOUT_LOCATION) {
-                WorkoutLocationScreen(
-                    onBack = { navController.popBackStack() },
-                    onReadjustRoutine = { navController.navigate(Route.WORKOUT_AI_LOADING) }
-                )
-            }
-
-            composable(Route.WORKOUT_AI_LOADING) {
-                WorkoutAiLoadingScreen(
-                    onComplete = {
-                        navController.navigate(Route.WORKOUT_ALT_ROUTINE) {
-                            popUpTo(Route.WORKOUT_AI_LOADING) { inclusive = true }
+                    onWeightSettingClick = { index ->
+                        val exerciseId = when (index) {
+                            0 -> 1  // 벤치프레스
+                            2 -> 2  // 체스트프레스
+                            else -> null
                         }
-                    }
-                )
-            }
 
-            composable(Route.WORKOUT_ALT_ROUTINE) {
-                AltRoutineScreen(
-                    onBack = { navController.popBackStack() },
-                    onUseAdjustedRoutine = {
-                        navController.navigate(Route.WORKOUT_ACTIVE) {
-                            popUpTo(Route.WORKOUT) { inclusive = false }
+                        exerciseId?.let { id ->
+                            navController.navigate(
+                                "${Route.WORKOUT_WEIGHT_SETTING}/$id"
+                            )
                         }
                     },
-                    onEditManually = { navController.navigate(Route.ROUTINE_MANUAL_DAY_SELECT) }
+
+                    onStartWorkout = {
+                        navController.navigate(Route.WORKOUT_PROGRESS)
+                    }
                 )
             }
 
-            composable(Route.WORKOUT_ACTIVE) {
-                ActiveWorkoutScreen(
-                    onRest = { navController.navigate(Route.WORKOUT_REST_TIMER) },
-                    onFinishWorkout = {
-                        navController.navigate(Route.WORKOUT_WEIGHT_RECORD) {
-                            popUpTo(Route.WORKOUT) { inclusive = false }
+
+            composable(Route.WORKOUT_LOCATION) {
+
+                WorkoutLocationScreen(
+                    onBack = {
+                        navController.popBackStack()
+                    },
+
+                    onConfirm = { place, gym ->
+
+                        if (place == WorkoutPlace.GYM && gym == "Fit Gym") {
+
+                            // 기존 장소 그대로 → 오늘의 운동으로 복귀
+                            navController.popBackStack()
+
+                        } else {
+
+                            // 운동 장소 변경 → AI 루틴 재추천 로딩
+                            navController.navigate(
+                                Route.WORKOUT_RECOMMENDATION_LOADING
+                            )
                         }
                     }
                 )
             }
 
-            composable(Route.WORKOUT_REST_TIMER) {
-                RestTimerScreen(
-                    onNextSet = { navController.popBackStack() },
-                    onSkipRest = { navController.popBackStack() }
+            composable(Route.WORKOUT_RECOMMENDATION_LOADING) {
+                WorkoutRecommendationLoadingScreen(
+                    onComplete = {
+                        navController.navigate(Route.WORKOUT_RECOMMENDATION) {
+                            popUpTo(Route.WORKOUT_RECOMMENDATION_LOADING) {
+                                inclusive = true
+                            }
+                        }
+                    }
                 )
             }
 
-            composable(Route.WORKOUT_WEIGHT_RECORD) {
-                WeightRecordScreen(
-                    onBack = { navController.popBackStack() },
-                    onRecordAndContinue = { navController.navigate(Route.WORKOUT_EVAL) },
-                    onSkip = { navController.navigate(Route.WORKOUT_EVAL) }
+            composable(Route.WORKOUT_RECOMMENDATION) {
+                WorkoutRecommendationScreen(
+                    onBack = {
+                        navController.popBackStack()
+                    },
+                    onPreviewClick = {
+                        navController.navigate(Route.WORKOUT_PREVIEW)
+                    },
+                    onStartWorkout = {
+                        navController.navigate(Route.WORKOUT_PROGRESS)
+                    },
+                    onEditClick = {
+                        navController.navigate(Route.WORKOUT_EXERCISE_SELECT)
+                    }
                 )
             }
 
-            composable(Route.WORKOUT_EVAL) {
-                WorkoutEvalScreen(
-                    onBack = { navController.popBackStack() },
-                    onViewAnalysis = { navController.navigate(Route.WORKOUT_ANALYSIS) }
+            composable(Route.WORKOUT_PREVIEW) {
+                TodayWorkoutScreen(
+                    onWeightSettingClick = { index ->
+                        navController.navigate(
+                            "${Route.WORKOUT_WEIGHT_SETTING}/$index"
+                        )
+                    }
                 )
             }
 
-            composable(Route.WORKOUT_ANALYSIS) {
-                TodayAnalysisScreen(
-                    onBack = { navController.popBackStack() },
-                    onViewSuggestion = { navController.navigate(Route.WORKOUT_ROUTINE_ADJUST) }
+            composable(Route.WORKOUT_EXERCISE_SELECT) {
+                WorkoutExerciseSelectScreen(
+                    onBack = {
+                        navController.popBackStack()
+                    },
+                    onNext = { selectedExercises ->
+                        navController.currentBackStackEntry
+                            ?.savedStateHandle
+                            ?.set(
+                                "selected_exercise_ids",
+                                selectedExercises.map { it.id }
+                            )
+
+                        navController.navigate(Route.WORKOUT_EXERCISE_SETTING)
+                    }
                 )
             }
 
-            composable(Route.WORKOUT_ROUTINE_ADJUST) {
-                RoutineAdjustScreen(
-                    onBack = { navController.popBackStack() },
-                    onApplySelected = { navController.navigate(Route.WORKOUT_ROUTINE_APPLIED) }
+            composable(Route.WORKOUT_EXERCISE_SETTING) {
+                val selectedIds = navController.previousBackStackEntry
+                    ?.savedStateHandle
+                    ?.get<List<Int>>("selected_exercise_ids")
+                    .orEmpty()
+
+                val selectedExercises = listOf(
+                    SelectableExercise(1, "벤치 프레스", "가슴", "프리웨이트"),
+                    SelectableExercise(2, "인클라인 덤벨프레스", "가슴", "프리웨이트"),
+                    SelectableExercise(3, "숄더 프레스", "어깨", "프리웨이트"),
+                    SelectableExercise(4, "체스트 프레스", "가슴", "머신/케이블"),
+                    SelectableExercise(5, "레그 프레스", "하체", "머신/케이블"),
+                    SelectableExercise(6, "랫풀다운", "등", "머신/케이블"),
+                    SelectableExercise(7, "줄넘기", "유산소", "전신"),
+                    SelectableExercise(8, "러닝머신", "유산소", "전신"),
+                    SelectableExercise(9, "바벨 컬", "이두", "프리웨이트")
+                ).filter { it.id in selectedIds }
+
+                WorkoutExerciseSettingScreen(
+                    selectedExercises = selectedExercises,
+                    onBack = {
+                        navController.popBackStack()
+                    },
+                    onComplete = { settings ->
+                        navController.navigate(Route.WORKOUT_PREVIEW)
+                    }
                 )
             }
 
-            composable(Route.WORKOUT_ROUTINE_APPLIED) {
-                RoutineAppliedScreen(
-                    onGoHome = {
+            composable(
+                route = "${Route.WORKOUT_WEIGHT_SETTING}/{exerciseId}",
+                arguments = listOf(
+                    navArgument("exerciseId") {
+                        type = NavType.IntType
+                    }
+                )
+            ) { backStackEntry ->
+
+                val exerciseId = backStackEntry.arguments
+                    ?.getInt("exerciseId") ?: 0
+
+                WorkoutWeightSettingScreen(
+                    initialExerciseId = exerciseId,
+                    onBack = {
+                        navController.popBackStack()
+                    },
+                    onComplete = { weights ->
+                        navController.navigate(Route.WORKOUT_PROGRESS)
+                    }
+                )
+            }
+
+            // 운동 수행 화면
+            composable(Route.WORKOUT_PROGRESS) {
+                WorkoutProgressScreen(
+                    onBack = {
+                        navController.popBackStack()
+                    },
+                    onFinish = { _ ->
+                        // 운동 조정 적용 완료 후 홈으로 이동하고 운동 화면 기록 제거
                         navController.navigate(Route.HOME) {
-                            popUpTo(Route.HOME) { inclusive = false }
+                            popUpTo(Route.WORKOUT_PROGRESS) { inclusive = true }
                             launchSingleTop = true
                         }
                     }
                 )
             }
+
 
             composable(Route.RECORD) {
                 RecordScreen(
@@ -609,3 +695,4 @@ fun FitMateNavHost() {
         }
     }
 }
+

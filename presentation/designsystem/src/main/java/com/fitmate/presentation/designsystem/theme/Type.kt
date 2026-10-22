@@ -2,42 +2,141 @@ package com.fitmate.presentation.designsystem.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
+import com.fitmate.presentation.designsystem.R
 
-// 컴포넌트 폰트 (GamtanRoad Dotum). 폰트 파일 추가 전까지 기본 폰트 사용
-val FitMateFontFamily: FontFamily = FontFamily.Default
+// ========================================
+// 1. FitMate 기본 폰트 - 감탄로드 돋움체
+// ========================================
 
-// 숫자 강조 폰트 (Wavve PADO). 폰트 파일 추가 전까지 기본 폰트 사용
-val FitMateNumberFontFamily: FontFamily = FontFamily.Default
+val FitMateFontFamily = FontFamily(
+    Font(
+        resId = R.font.gamtanroad_thin,
+        weight = FontWeight.Thin
+    ),
+    Font(
+        resId = R.font.gamtanroad_regular,
+        weight = FontWeight.Normal
+    ),
+    Font(
+        resId = R.font.gamtanroad_bold,
+        weight = FontWeight.Bold
+    )
+)
+
+// ========================================
+// 2. FitMate 숫자 폰트 - 웨이브 파도체
+// ========================================
+
+val FitMateNumberFontFamily = FontFamily(
+    Font(
+        resId = R.font.wavve_pado_regular,
+        weight = FontWeight.Normal
+    )
+)
+
+// ========================================
+// 3. 공통 TextStyle 생성 함수
+// ========================================
 
 internal fun fitMateTextStyle(
     fontSize: TextUnit,
     lineHeight: TextUnit,
     fontWeight: FontWeight = FontWeight.Normal,
     fontFamily: FontFamily = FitMateFontFamily
-) = TextStyle(
-    fontFamily = fontFamily,
-    fontWeight = fontWeight,
-    fontSize = fontSize,
-    lineHeight = lineHeight,
-    letterSpacing = 0.sp
-)
+): TextStyle {
+    return TextStyle(
+        fontFamily = fontFamily,
+        fontWeight = fontWeight,
+        fontSize = fontSize,
+        lineHeight = lineHeight,
+        letterSpacing = 0.sp
+    )
+}
 
-// Roboto = Android 기본 폰트
+// ========================================
+// 4. FitMate Typography
+// ========================================
+
 val FitMateTypography = Typography(
-    headlineLarge = fitMateTextStyle(32.sp, 40.sp, FontWeight.Normal, FontFamily.Default),
-    headlineMedium = fitMateTextStyle(28.sp, 36.sp, FontWeight.Normal, FontFamily.Default),
-    headlineSmall = fitMateTextStyle(24.sp, 32.sp, FontWeight.Normal, FontFamily.Default),
-    titleLarge = fitMateTextStyle(22.sp, 28.sp, FontWeight.Normal, FontFamily.Default),
-    titleMedium = fitMateTextStyle(16.sp, 24.sp, FontWeight.Medium, FontFamily.Default),
-    titleSmall = fitMateTextStyle(14.sp, 20.sp, FontWeight.Medium, FontFamily.Default),
-    bodyLarge = fitMateTextStyle(16.sp, 24.sp, FontWeight.Normal, FontFamily.Default),
-    bodyMedium = fitMateTextStyle(14.sp, 20.sp, FontWeight.Normal, FontFamily.Default),
-    bodySmall = fitMateTextStyle(12.sp, 16.sp, FontWeight.Normal, FontFamily.Default),
-    labelLarge = fitMateTextStyle(14.sp, 20.sp, FontWeight.Medium, FontFamily.Default),
-    labelMedium = fitMateTextStyle(12.sp, 16.sp, FontWeight.Medium, FontFamily.Default),
-    labelSmall = fitMateTextStyle(11.sp, 16.sp, FontWeight.Medium, FontFamily.Default)
+
+    // 큰 제목
+    headlineLarge = fitMateTextStyle(
+        fontSize = 32.sp,
+        lineHeight = 40.sp,
+        fontWeight = FontWeight.Bold
+    ),
+
+    headlineMedium = fitMateTextStyle(
+        fontSize = 28.sp,
+        lineHeight = 36.sp,
+        fontWeight = FontWeight.Bold
+    ),
+
+    headlineSmall = fitMateTextStyle(
+        fontSize = 24.sp,
+        lineHeight = 32.sp,
+        fontWeight = FontWeight.Bold
+    ),
+
+    // 제목
+    titleLarge = fitMateTextStyle(
+        fontSize = 22.sp,
+        lineHeight = 28.sp,
+        fontWeight = FontWeight.Bold
+    ),
+
+    titleMedium = fitMateTextStyle(
+        fontSize = 16.sp,
+        lineHeight = 24.sp,
+        fontWeight = FontWeight.Bold
+    ),
+
+    titleSmall = fitMateTextStyle(
+        fontSize = 14.sp,
+        lineHeight = 20.sp,
+        fontWeight = FontWeight.Bold
+    ),
+
+    // 본문
+    bodyLarge = fitMateTextStyle(
+        fontSize = 16.sp,
+        lineHeight = 24.sp,
+        fontWeight = FontWeight.Normal
+    ),
+
+    bodyMedium = fitMateTextStyle(
+        fontSize = 14.sp,
+        lineHeight = 20.sp,
+        fontWeight = FontWeight.Normal
+    ),
+
+    bodySmall = fitMateTextStyle(
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+        fontWeight = FontWeight.Normal
+    ),
+
+    // 버튼 및 라벨
+    labelLarge = fitMateTextStyle(
+        fontSize = 14.sp,
+        lineHeight = 20.sp,
+        fontWeight = FontWeight.Bold
+    ),
+
+    labelMedium = fitMateTextStyle(
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+        fontWeight = FontWeight.Normal
+    ),
+
+    labelSmall = fitMateTextStyle(
+        fontSize = 11.sp,
+        lineHeight = 16.sp,
+        fontWeight = FontWeight.Normal
+    )
 )
