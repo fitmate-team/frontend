@@ -54,8 +54,8 @@ object Route {
     const val WORKOUT_PROGRESS = "workout_progress"
 
     // Record
-    const val RECORD_WORKOUT_DETAIL = "record/workout-detail"
-    const val RECORD_GROWTH_ANALYSIS = "record/growth-analysis"
+
+    const val RECORD_WORKOUT_ANALYSIS = "record_workout_analysis"
 
     // MyPage
     const val MYPAGE_BODY_PROFILE = "mypage/body-profile"

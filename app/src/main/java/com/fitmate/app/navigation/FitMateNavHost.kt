@@ -51,9 +51,8 @@ import com.fitmate.presentation.mypage.BodyProfileScreen
 import com.fitmate.presentation.mypage.HomeEquipmentEditScreen
 import com.fitmate.presentation.mypage.MyPageScreen
 import com.fitmate.presentation.mypage.WorkoutEnvironmentScreen
-import com.fitmate.presentation.record.GrowthAnalysisScreen
 import com.fitmate.presentation.record.RecordScreen
-import com.fitmate.presentation.record.WorkoutRecordDetailScreen
+
 import com.fitmate.presentation.routine.AiHandsOffSetupScreen
 import com.fitmate.presentation.routine.ExerciseConfigurationScreen
 import com.fitmate.presentation.routine.ManualDaySelectionScreen
@@ -74,6 +73,8 @@ import com.fitmate.presentation.workout.WorkoutExerciseSelectScreen
 import com.fitmate.presentation.workout.WorkoutExerciseSettingScreen
 import com.fitmate.presentation.workout.WorkoutProgressScreen
 import com.fitmate.presentation.workout.WorkoutWeightSettingScreen
+import com.fitmate.presentation.workout.WorkoutAnalysisScreen
+import com.fitmate.presentation.workout.WorkoutAnalysisItem
 
 
 @Composable
@@ -92,6 +93,10 @@ fun FitMateNavHost() {
     var manualSelectedExercises by remember { mutableStateOf(listOf<String>()) }
     var routineDetailDayLabel by remember { mutableStateOf("월") }
     var mypageEquipmentEditTitle by remember { mutableStateOf("홈트 기구 편집") }
+
+    var selectedWorkoutTitle by remember {
+        mutableStateOf("")
+    }
 
     Scaffold(
         bottomBar = {
@@ -446,22 +451,53 @@ fun FitMateNavHost() {
 
             composable(Route.RECORD) {
                 RecordScreen(
-                    onOpenWorkoutDetail = { navController.navigate(Route.RECORD_WORKOUT_DETAIL) }
+                    onOpenWorkoutDetail = { title ->
+                        selectedWorkoutTitle = title
+                        navController.navigate(Route.RECORD_WORKOUT_ANALYSIS)
+                    }
                 )
             }
 
-            composable(Route.RECORD_WORKOUT_DETAIL) {
-                WorkoutRecordDetailScreen(
-                    onBack = { navController.popBackStack() },
-                    onViewGrowth = { navController.navigate(Route.RECORD_GROWTH_ANALYSIS) }
+            composable(Route.RECORD_WORKOUT_ANALYSIS) {
+                WorkoutAnalysisScreen(
+                    items = listOf(
+                        WorkoutAnalysisItem(
+                            name = "벤치프레스",
+                            weightKg = 30,
+                            reps = 12,
+                            totalSets = 3,
+                            completedSets = 3,
+                            difficulty = "적당함"
+                        ),
+                        WorkoutAnalysisItem(
+                            name = "숄더프레스",
+                            weightKg = 15,
+                            reps = 12,
+                            totalSets = 3,
+                            completedSets = 2,
+                            difficulty = "어려움"
+                        ),
+                        WorkoutAnalysisItem(
+                            name = "체스트프레스",
+                            weightKg = 20,
+                            reps = 12,
+                            totalSets = 3,
+                            completedSets = 3,
+                            difficulty = "쉬움"
+                        )
+                    ),
+                    totalSeconds = 3300L,
+                    restSeconds = 600L,
+                    hasNextRoutine = false,
+                    onBack = {
+                        navController.popBackStack()
+                    },
+                    onNext = {
+                        navController.popBackStack()
+                    }
                 )
             }
 
-            composable(Route.RECORD_GROWTH_ANALYSIS) {
-                GrowthAnalysisScreen(
-                    onBack = { navController.popBackStack() }
-                )
-            }
 
             composable(Route.MYPAGE) {
                 MyPageScreen(
