@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Edit
@@ -26,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.fitmate.presentation.designsystem.theme.MinTouchTarget
 import com.fitmate.presentation.designsystem.theme.Blue500
 import com.fitmate.presentation.designsystem.theme.BorderDefault
 import com.fitmate.presentation.designsystem.theme.FitMateTheme
@@ -37,12 +39,13 @@ import com.fitmate.presentation.designsystem.theme.White
 import com.fitmate.presentation.designsystem.theme.fitMateTextStyle
 
 // 설정값 변경 항목 (목표, 운동 빈도 등). 하단 구분선 포함
+// onEditClick이 null이면 수정 버튼 자리를 비워둔다 (수정할 수 없는 항목)
 @Composable
 fun SettingChangeItem(
     icon: ImageVector,
     label: String,
     value: String,
-    onEditClick: () -> Unit,
+    onEditClick: (() -> Unit)?,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxWidth().background(White)) {
@@ -73,7 +76,9 @@ fun SettingChangeItem(
                 )
             }
             // 36dp 버튼 영역 + 최소 터치 영역 48dp 보장
-            IconButton(onClick = onEditClick) {
+            if (onEditClick == null) {
+                Spacer(modifier = Modifier.size(MinTouchTarget))
+            } else IconButton(onClick = onEditClick) {
                 Box(
                     modifier = Modifier
                         .size(36.dp)

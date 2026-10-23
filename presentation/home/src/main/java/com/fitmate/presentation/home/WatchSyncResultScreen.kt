@@ -1,6 +1,7 @@
 package com.fitmate.presentation.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,153 +13,187 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Smartphone
-import androidx.compose.material.icons.filled.Watch
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Smartphone
+import androidx.compose.material.icons.outlined.Watch
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.fitmate.presentation.designsystem.component.FitMateBackTopBar
+import com.fitmate.presentation.designsystem.component.FitMatePrimaryButton
+import com.fitmate.presentation.designsystem.theme.Blue400
+import com.fitmate.presentation.designsystem.theme.Blue500
+import com.fitmate.presentation.designsystem.theme.Blue600
+import com.fitmate.presentation.designsystem.theme.BorderDefault
+import com.fitmate.presentation.designsystem.theme.FitMateTheme
+import com.fitmate.presentation.designsystem.theme.Green100
+import com.fitmate.presentation.designsystem.theme.ShapeLarge
+import com.fitmate.presentation.designsystem.theme.Spacing1
+import com.fitmate.presentation.designsystem.theme.Spacing2
+import com.fitmate.presentation.designsystem.theme.Spacing4
+import com.fitmate.presentation.designsystem.theme.Spacing5
+import com.fitmate.presentation.designsystem.theme.Spacing6
+import com.fitmate.presentation.designsystem.theme.TextPrimary
+import com.fitmate.presentation.designsystem.theme.TextSecondary
+import com.fitmate.presentation.designsystem.theme.White
+import com.fitmate.presentation.designsystem.theme.fitMateTextStyle
 
-private val FitMateBlue = Color(0xFF3E78AD)
-private val ScreenBackground = Color(0xFFF8F9FA)
-private val CardBorder = Color(0xFFE2E6EA)
-private val TextMuted = Color(0xFF6C757D)
-private val CheckGreen = Color(0xFF428A54)
+private val SyncedItems = listOf("실제 중량", "반복수", "세트 완료", "휴식 시간", "운동 시간")
+private val DeviceBoxShape = RoundedCornerShape(20.dp)
+private val DividerWidth = 1.3.dp
 
-private val syncedItems = listOf("실제 중량", "반복수", "세트 완료", "휴식시간", "운동시간")
-
+// 2.2 워치에서 운동이 끝났을 때
 @Composable
 fun WatchSyncResultScreen(
+    syncedSetCount: Int = 16,
     onBack: () -> Unit = {},
     onViewResult: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(ScreenBackground)
+            .background(White)
     ) {
-        IconButton(onClick = onBack, modifier = Modifier.padding(4.dp)) {
-            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
-        }
-
+        FitMateBackTopBar(onBack = onBack, showDivider = false)
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 28.dp),
+                .weight(1f)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = Spacing6),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Box(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFF1A1A1A)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(imageVector = Icons.Filled.Watch, contentDescription = null, tint = Color.White, modifier = Modifier.size(32.dp))
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    repeat(3) {
-                        Box(
-                            modifier = Modifier
-                                .size(6.dp)
-                                .clip(CircleShape)
-                                .background(FitMateBlue.copy(alpha = 0.7f - it * 0.15f))
-                        )
-                    }
-                }
-                Box(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(FitMateBlue),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(imageVector = Icons.Filled.Smartphone, contentDescription = null, tint = Color.White, modifier = Modifier.size(32.dp))
-                }
-            }
-
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(114.dp))
+            SyncDevices()
+            Spacer(modifier = Modifier.height(Spacing5))
             Text(
                 text = "Watch 기록을 가져왔어요",
-                fontSize = MaterialTheme.typography.headlineSmall.fontSize,
-                textAlign = TextAlign.Center
+                style = fitMateTextStyle(24.sp, 36.sp, FontWeight.Bold, letterSpacing = (-0.3).sp),
+                color = TextPrimary
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(Spacing1))
             Text(
-                text = "오늘 운동 기록 16세트가 동기화됐어요.",
-                color = TextMuted,
-                fontSize = MaterialTheme.typography.bodyMedium.fontSize,
+                text = "오늘 운동 기록 ${syncedSetCount}세트가 동기화됐어요.",
+                style = fitMateTextStyle(14.sp, 21.sp),
+                color = TextSecondary
+            )
+            Spacer(modifier = Modifier.height(28.dp))
+            SyncedItemList()
+            Spacer(modifier = Modifier.height(56.dp))
+            FitMatePrimaryButton(text = "운동 결과 보기", onClick = onViewResult, height = 50.dp)
+            Spacer(modifier = Modifier.height(Spacing4))
+            Text(
+                text = "연결이 끊긴 경우 Watch에 기록을 저장한 뒤\n재연결 시 자동으로 동기화해요.",
+                style = fitMateTextStyle(12.sp, 21.sp),
+                color = TextSecondary,
                 textAlign = TextAlign.Center
             )
+            Spacer(modifier = Modifier.height(Spacing6))
+        }
+    }
+}
 
-            Spacer(modifier = Modifier.height(28.dp))
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                color = Color.White,
-                border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder)
-            ) {
-                Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)) {
-                    syncedItems.forEachIndexed { index, label ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.CheckCircle,
-                                contentDescription = null,
-                                tint = CheckGreen,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Text(text = label, fontSize = MaterialTheme.typography.bodyMedium.fontSize)
-                        }
-                        if (index < syncedItems.lastIndex) {
-                            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(CardBorder))
+// 워치 → 스마트폰 동기화 아이콘
+@Composable
+private fun SyncDevices() {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        DeviceBox(icon = Icons.Outlined.Watch, containerColor = White, iconColor = Blue500)
+        Spacer(modifier = Modifier.width(14.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing1)) {
+            SyncDot(color = Blue600, alpha = 0.76f)
+            SyncDot(color = Blue500, alpha = 0.43f)
+            SyncDot(color = Blue400, alpha = 0.35f)
+        }
+        Spacer(modifier = Modifier.width(Spacing4))
+        DeviceBox(icon = Icons.Outlined.Smartphone, containerColor = Blue500, iconColor = White)
+    }
+}
+
+@Composable
+private fun DeviceBox(icon: ImageVector, containerColor: Color, iconColor: Color) {
+    Box(
+        modifier = Modifier
+            .size(62.dp)
+            .clip(DeviceBoxShape)
+            .background(containerColor)
+            .border(1.dp, BorderDefault, DeviceBoxShape),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(imageVector = icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(32.dp))
+    }
+}
+
+@Composable
+private fun SyncDot(color: Color, alpha: Float) {
+    Box(
+        modifier = Modifier
+            .size(6.dp)
+            .alpha(alpha)
+            .clip(CircleShape)
+            .background(color)
+    )
+}
+
+// 동기화된 항목 목록 (항목 사이 구분선)
+@Composable
+private fun SyncedItemList() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(ShapeLarge)
+            .background(White)
+            .border(DividerWidth, BorderDefault, ShapeLarge)
+            .padding(horizontal = Spacing5, vertical = Spacing4)
+    ) {
+        SyncedItems.forEachIndexed { index, item ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(38.dp)
+                    .drawBehind {
+                        if (index < SyncedItems.lastIndex) {
+                            val y = size.height - DividerWidth.toPx() / 2
+                            drawLine(BorderDefault, Offset(0f, y), Offset(size.width, y), DividerWidth.toPx())
                         }
                     }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-            Button(
-                onClick = onViewResult,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = FitMateBlue),
-                shape = RoundedCornerShape(12.dp)
+                    .padding(vertical = Spacing2),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = "운동 결과 보기")
+                Icon(
+                    imageVector = Icons.Outlined.CheckCircle,
+                    contentDescription = null,
+                    tint = Green100,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(text = item, style = fitMateTextStyle(14.sp, 21.sp), color = TextPrimary)
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "연결이 끊긴 경우 Watch에 기록을 저장한 뒤 재연결 시 자동으로 동기화해요.",
-                color = TextMuted,
-                fontSize = MaterialTheme.typography.labelSmall.fontSize,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.width(220.dp)
-            )
-            Spacer(modifier = Modifier.height(24.dp))
         }
+    }
+}
+
+@Preview(widthDp = 394, heightDp = 892)
+@Composable
+private fun WatchSyncResultScreenPreview() {
+    FitMateTheme {
+        WatchSyncResultScreen()
     }
 }

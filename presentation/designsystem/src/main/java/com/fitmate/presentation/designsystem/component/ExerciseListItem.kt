@@ -18,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -41,15 +42,16 @@ import com.fitmate.presentation.designsystem.theme.fitMateTextStyle
 private val ExerciseIconShape = RoundedCornerShape(10.dp)
 
 // 루틴 운동 목록 항목
-// needWeight = true 이면 "중량 설정 필요" 배지 표시
+// needWeight = true 이면 "중량 설정 필요" 배지 표시. 유산소처럼 휴식이 없으면 restTime = null
 @Composable
 fun ExerciseListItem(
     order: String,
     name: String,
     detail: String,
-    restTime: String,
+    restTime: String?,
     modifier: Modifier = Modifier,
-    needWeight: Boolean = false
+    needWeight: Boolean = false,
+    icon: ImageVector = Icons.Rounded.FitnessCenter
 ) {
     Row(
         modifier = modifier
@@ -74,7 +76,7 @@ fun ExerciseListItem(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Rounded.FitnessCenter,
+                    imageVector = icon,
                     contentDescription = null,
                     tint = TextSecondary,
                     modifier = Modifier.size(18.dp)
@@ -105,11 +107,13 @@ fun ExerciseListItem(
                 style = fitMateTextStyle(13.sp, 18.sp),
                 color = TextSecondary
             )
-            Text(
-                text = restTime,
-                style = fitMateTextStyle(12.sp, 18.sp),
-                color = Blue500
-            )
+            if (restTime != null) {
+                Text(
+                    text = restTime,
+                    style = fitMateTextStyle(12.sp, 18.sp),
+                    color = Blue500
+                )
+            }
         }
     }
 }

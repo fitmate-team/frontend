@@ -57,7 +57,7 @@ fun SelectableExerciseItem(
             .background(if (selected) Blue100 else White)
             .border(1.dp, if (selected) Blue500 else BorderDefault, ShapeLarge)
             .clickable(onClick = onClick)
-            .padding(horizontal = 22.dp),
+            .padding(horizontal = 22.8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(

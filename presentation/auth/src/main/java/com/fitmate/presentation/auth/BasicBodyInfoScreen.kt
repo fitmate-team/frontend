@@ -1,121 +1,93 @@
 package com.fitmate.presentation.auth
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.fitmate.domain.model.Gender
+import com.fitmate.presentation.designsystem.component.FitMatePrimaryButton
+import com.fitmate.presentation.designsystem.component.SelectableBox
+import com.fitmate.presentation.designsystem.component.UnitTextField
+import com.fitmate.presentation.designsystem.theme.Blue500
+import com.fitmate.presentation.designsystem.theme.FitMateTheme
+import com.fitmate.presentation.designsystem.theme.Spacing6
 
-private val Blue700 = Color(0xFF3E78AD)
-private val Blue200 = Color(0xFFDBE9F5)
-private val Gray200 = Color(0xFFE2E6EA)
-private val Gray500 = Color(0xFF6C757D)
-private val Gray900 = Color(0xFF16181A)
-private val ScreenBg = Color(0xFFF8F9FA)
+private val Genders = listOf(Gender.MALE to "남성", Gender.FEMALE to "여성")
 
-@Composable
-private fun SignupHeader(step: Int, onBack: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().height(80.dp).padding(horizontal = 20.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        IconButton(onClick = onBack) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로", tint = Gray900)
-        }
-        Box(
-            modifier = Modifier.weight(1f).padding(horizontal = 8.dp).height(4.dp).background(Gray200, RoundedCornerShape(2.dp))
-        ) {
-            Box(modifier = Modifier.fillMaxWidth(step / 8f).height(4.dp).background(Blue700, RoundedCornerShape(2.dp)))
-        }
-        Text("$step / 8", fontSize = 12.sp, color = Gray500, fontWeight = FontWeight.Bold)
-    }
-}
-
+// 1.2 회원가입 (기본 정보)
 @Composable
 fun BasicBodyInfoScreen(
+    gender: Gender?,
+    age: String,
+    height: String,
+    weight: String,
+    onGenderSelect: (Gender) -> Unit,
+    onAgeChange: (String) -> Unit,
+    onHeightChange: (String) -> Unit,
+    onWeightChange: (String) -> Unit,
     onBack: () -> Unit,
     onNext: () -> Unit
 ) {
-    var nickname by remember { mutableStateOf("") }
-    var gender by remember { mutableStateOf<String?>(null) }
-    var age by remember { mutableStateOf(24) }
-    var height by remember { mutableStateOf(175) }
-    var weight by remember { mutableStateOf(72) }
-
-    Column(modifier = Modifier.fillMaxSize().background(ScreenBg)) {
-        SignupHeader(step = 1, onBack = onBack)
-
-        Column(modifier = Modifier.weight(1f).padding(20.dp)) {
-            Text("기본 정보를 알려주세요", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Gray900)
-            Text("더 정확한 운동 추천에 활용돼요.", fontSize = 14.sp, color = Gray500, modifier = Modifier.padding(top = 8.dp, bottom = 20.dp))
-
-            Text("닉네임", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Gray900)
-            OutlinedTextField(value = nickname, onValueChange = { nickname = it }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 20.dp))
-
-            Text("성별", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Gray900)
-            Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 20.dp)) {
-                listOf("남성", "여성").forEach { g ->
-                    OutlinedButton(
-                        onClick = { gender = g },
-                        colors = if (gender == g) ButtonDefaults.outlinedButtonColors(containerColor = Blue200) else ButtonDefaults.outlinedButtonColors(),
-                        modifier = Modifier.weight(1f).padding(end = if (g == "남성") 12.dp else 0.dp)
-                    ) { Text(g) }
+    SignupStepScaffold(
+        step = 1,
+        onBack = onBack,
+        title = "기본 정보를 알려주세요",
+        subtitle = "더 정확한 운동 추천에 활용돼요.",
+        contentTopSpacing = 56.dp,
+        bottomBar = { FitMatePrimaryButton(text = "다음", onClick = onNext) }
+    ) {
+        SignupLabeledField(label = "성별") {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Genders.forEach { (option, label) ->
+                    SelectableBox(
+                        text = label,
+                        selected = gender == option,
+                        onClick = { onGenderSelect(option) },
+                        selectedTextColor = Blue500,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
-
-            NumberStepperField(label = "나이", value = age, unit = "세", onChange = { age = it })
-            NumberStepperField(label = "키", value = height, unit = "cm", onChange = { height = it })
-            NumberStepperField(label = "몸무게", value = weight, unit = "kg", onChange = { weight = it })
         }
-
-        Button(
-            onClick = onNext,
-            colors = ButtonDefaults.buttonColors(containerColor = Blue700),
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp).height(52.dp)
-        ) {
-            Text("다음", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(Spacing6))
+        SignupLabeledField(label = "나이") {
+            UnitTextField(value = age, onValueChange = onAgeChange, unit = "세")
+        }
+        Spacer(modifier = Modifier.height(Spacing6))
+        SignupLabeledField(label = "키") {
+            UnitTextField(value = height, onValueChange = onHeightChange, unit = "cm", keyboardType = KeyboardType.Decimal)
+        }
+        Spacer(modifier = Modifier.height(Spacing6))
+        SignupLabeledField(label = "몸무게") {
+            UnitTextField(value = weight, onValueChange = onWeightChange, unit = "kg", keyboardType = KeyboardType.Decimal)
         }
     }
 }
 
+@Preview(widthDp = 394, heightDp = 892)
 @Composable
-private fun NumberStepperField(label: String, value: Int, unit: String, onChange: (Int) -> Unit) {
-    Column(modifier = Modifier.padding(bottom = 20.dp)) {
-        Text(label, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Gray900)
-        OutlinedTextField(
-            value = value.toString(),
-            onValueChange = { it.toIntOrNull()?.let(onChange) },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            trailingIcon = { Text(unit, color = Gray500) },
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+private fun BasicBodyInfoScreenPreview() {
+    FitMateTheme {
+        BasicBodyInfoScreen(
+            gender = Gender.FEMALE,
+            age = "25",
+            height = "",
+            weight = "",
+            onGenderSelect = {},
+            onAgeChange = {},
+            onHeightChange = {},
+            onWeightChange = {},
+            onBack = {},
+            onNext = {}
         )
     }
 }
