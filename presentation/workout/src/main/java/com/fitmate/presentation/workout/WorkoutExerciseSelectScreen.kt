@@ -1,3 +1,4 @@
+
 package com.fitmate.presentation.workout
 
 import androidx.compose.foundation.background
@@ -50,6 +51,7 @@ fun WorkoutExerciseSelectScreen(
     modifier: Modifier = Modifier,
     exercises: List<SelectableExercise> = sampleExercises,
     initialSelectedIds: Set<Int> = setOf(1, 3, 4),
+    buttonLabel: String? = null,
     onBack: () -> Unit = {},
     onNext: (List<SelectableExercise>) -> Unit = {}
 ) {
@@ -78,8 +80,6 @@ fun WorkoutExerciseSelectScreen(
             .fillMaxSize()
             .background(White)
     ) {
-
-        // 상단 검색 영역
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -145,14 +145,12 @@ fun WorkoutExerciseSelectScreen(
             }
         }
 
-        // 부위별 필터 칩
         LazyRow(
             modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = 18.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             items(exerciseCategories) { category ->
-
                 val selected = selectedCategory == category
 
                 Box(
@@ -194,7 +192,6 @@ fun WorkoutExerciseSelectScreen(
             color = BorderDefault
         )
 
-        // 운동 목록
         LazyColumn(
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(
@@ -209,7 +206,6 @@ fun WorkoutExerciseSelectScreen(
                 items = filteredExercises,
                 key = { it.id }
             ) { exercise ->
-
                 val selected = exercise.id in selectedIds
 
                 Row(
@@ -235,7 +231,6 @@ fun WorkoutExerciseSelectScreen(
                         .padding(horizontal = 24.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-
                     Box(
                         modifier = Modifier
                             .size(30.dp)
@@ -288,7 +283,6 @@ fun WorkoutExerciseSelectScreen(
             }
         }
 
-        // 하단 버튼
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -301,7 +295,8 @@ fun WorkoutExerciseSelectScreen(
                 )
         ) {
             PrimaryWorkoutButton(
-                label = "선택한 운동 설정하기 (${selectedIds.size})",
+                label = buttonLabel
+                    ?: "선택한 운동 설정하기 (${selectedIds.size})",
                 onClick = {
                     onNext(
                         exercises.filter { it.id in selectedIds }
