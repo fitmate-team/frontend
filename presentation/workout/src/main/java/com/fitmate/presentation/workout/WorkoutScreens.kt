@@ -1,3 +1,4 @@
+
 package com.fitmate.presentation.workout
 
 import androidx.compose.foundation.background
@@ -54,17 +55,12 @@ fun TodayWorkoutScreen(
     onChangeLocation: () -> Unit = {},
     onStartWorkout: () -> Unit = {}
 ) {
-
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(White)
     ) {
-
-        // =========================
         // 상단 헤더
-        // =========================
-
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -77,14 +73,10 @@ fun TodayWorkoutScreen(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-
-            // 미리보기: 뒤로가기 + 미리보기
-            // 일반 화면: 오늘의 운동
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing3)
             ) {
-
                 if (isPreview) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
@@ -104,9 +96,8 @@ fun TodayWorkoutScreen(
                 )
             }
 
-            // 일반 화면에서만 장소 변경 버튼 표시
+            // 운동 환경 변경 버튼
             if (!isPreview) {
-
                 Row(
                     modifier = Modifier
                         .border(
@@ -122,16 +113,15 @@ fun TodayWorkoutScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Spacing1)
                 ) {
-
                     Icon(
                         imageVector = Icons.Rounded.Place,
-                        contentDescription = "운동 장소 변경",
+                        contentDescription = null,
                         modifier = Modifier.size(14.dp),
                         tint = TextSecondary
                     )
 
                     Text(
-                        text = state.gymName,
+                        text = "운동 환경 변경하기",
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary
                     )
@@ -139,10 +129,7 @@ fun TodayWorkoutScreen(
             }
         }
 
-        // =========================
         // 운동 정보 및 리스트
-        // =========================
-
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
@@ -153,17 +140,14 @@ fun TodayWorkoutScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(Spacing2)
         ) {
-
-            // 운동 카테고리 + 통계
             item {
-
+                // 운동 카테고리 및 날짜
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = Spacing4),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-
                     Box(
                         modifier = Modifier
                             .size(48.dp)
@@ -173,7 +157,6 @@ fun TodayWorkoutScreen(
                             ),
                         contentAlignment = Alignment.Center
                     ) {
-
                         Icon(
                             painter = painterResource(
                                 R.drawable.ic_workout_fitness_center
@@ -203,13 +186,13 @@ fun TodayWorkoutScreen(
 
                 HorizontalDivider(color = BorderDefault)
 
+                // 운동 통계
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = Spacing2),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-
                     WorkoutStat(
                         value = "${state.durationMinutes}분",
                         label = "예상 시간",
@@ -233,8 +216,8 @@ fun TodayWorkoutScreen(
                     )
 
                     WorkoutStat(
-                        value = "${state.averageRestSeconds}초",
-                        label = "평균 휴식",
+                        value = state.gymName,
+                        label = "운동 장소",
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -242,64 +225,57 @@ fun TodayWorkoutScreen(
                 Spacer(Modifier.height(Spacing4))
             }
 
-            // 운동 리스트
+            // 운동 아이템은 클릭해도 이동하지 않음
             itemsIndexed(state.exercises) { index, exercise ->
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(
-                            enabled = exercise.needsWeight
-                        ) {
-                            onWeightSettingClick(index)
-                        }
-                ) {
-
-                    ExerciseListItem(
-                        order = (index + 1)
-                            .toString()
-                            .padStart(2, '0'),
-                        name = exercise.name,
-                        detail = exercise.detail,
-                        restTime = exercise.rest,
-                        needWeight = exercise.needsWeight
-                    )
-                }
+                ExerciseListItem(
+                    order = (index + 1)
+                        .toString()
+                        .padStart(2, '0'),
+                    name = exercise.name,
+                    detail = exercise.detail,
+                    restTime = exercise.rest,
+                    needWeight = exercise.needsWeight
+                )
             }
 
-            // 일반 화면에서만 시작하기 버튼 표시
             if (!isPreview) {
-
                 item {
-
                     Spacer(Modifier.height(Spacing1))
 
                     PrimaryWorkoutButton(
                         label = "시작하기",
-                        onClick = onStartWorkout
+                        onClick = {
+                            val firstWeightRequiredIndex =
+                                state.exercises.indexOfFirst { it.needsWeight }
+
+                            if (firstWeightRequiredIndex >= 0) {
+                                // 중량 설정이 필요한 운동이 하나라도 있는 경우
+                                onWeightSettingClick(firstWeightRequiredIndex)
+                            } else {
+                                // 모든 운동의 중량이 설정된 경우
+                                onStartWorkout()
+                            }
+                        }
                     )
                 }
             }
+
         }
     }
 }
 
-// =========================
 // 운동 통계
-// =========================
-
 @Composable
 private fun WorkoutStat(
     value: String,
     label: String,
     modifier: Modifier = Modifier
 ) {
-
     Column(
         modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-
         Text(
             text = value,
             style = MaterialTheme.typography.titleMedium,
@@ -315,16 +291,12 @@ private fun WorkoutStat(
     }
 }
 
-// =========================
 // 공통 버튼
-// =========================
-
 @Composable
 fun PrimaryWorkoutButton(
     label: String,
     onClick: () -> Unit
 ) {
-
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -336,7 +308,6 @@ fun PrimaryWorkoutButton(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-
         Text(
             text = label,
             style = MaterialTheme.typography.titleMedium,

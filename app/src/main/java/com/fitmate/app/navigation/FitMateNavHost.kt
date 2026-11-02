@@ -137,7 +137,7 @@ fun FitMateNavHost() {
 
         NavHost(
             navController = navController,
-            startDestination = Route.LOGIN,
+            startDestination = Route.WORKOUT,
             modifier = Modifier.padding(innerPadding),
 
             // 화면 전환 애니메이션 제거
