@@ -53,7 +53,7 @@ data class WeeklyRoutine(
     val days: List<RoutineDayPlan>
 )
 
-// 서버 연동 전까지 사용하는 예시 데이터
+// 미리보기용 예시 데이터
 val SampleWeeklyRoutine = WeeklyRoutine(
     place = "헬스장",
     averageTime = "약 55분",
@@ -69,10 +69,11 @@ val SampleWeeklyRoutine = WeeklyRoutine(
     )
 )
 
-// 3.1 나의 루틴. routine이 null이면 생성된 루틴이 없는 상태
+// 3.1 나의 루틴. routine이 null이면 생성된 루틴이 없는 상태. 불러오는 동안은 내용을 비워둔다
 @Composable
 fun RoutineScreen(
     routine: WeeklyRoutine? = SampleWeeklyRoutine,
+    isLoading: Boolean = false,
     onCreateRoutine: () -> Unit = {},
     onOpenDay: (String) -> Unit = {}
 ) {
@@ -83,7 +84,7 @@ fun RoutineScreen(
     ) {
         FitMateTabTopBar(
             title = "나의 루틴",
-            action = if (routine != null) {
+            action = if (routine != null && !isLoading) {
                 {
                     FitMateCompactButton(
                         text = "루틴 재생성하기",
@@ -96,7 +97,9 @@ fun RoutineScreen(
                 null
             }
         )
-        if (routine == null) {
+        if (isLoading) {
+            Spacer(modifier = Modifier.weight(1f))
+        } else if (routine == null) {
             EmptyRoutine(onCreateRoutine = onCreateRoutine, modifier = Modifier.weight(1f))
         } else {
             Column(
