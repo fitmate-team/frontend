@@ -4,6 +4,7 @@ import com.fitmate.data.remote.api.CatalogApi
 import com.fitmate.data.remote.apiCall
 import com.fitmate.data.remote.dto.EquipmentResponseDto
 import com.fitmate.data.remote.dto.ExerciseResponseDto
+import com.fitmate.data.remote.toEnumOrNull
 import com.fitmate.domain.model.BaselineRecordType
 import com.fitmate.domain.model.Equipment
 import com.fitmate.domain.model.EquipmentCategory
@@ -37,12 +38,14 @@ class CatalogRepositoryImpl @Inject constructor(
             catalogApi.getExercises().mapNotNull { it.toDomain() }
         }.onSuccess { exerciseCache = it }
     }
+
+    // 운동 환경의 기구는 마이페이지에서 바뀔 수 있어서 캐시하지 않는다
+    override suspend fun getAvailableExercises(environmentId: Long): Result<List<Exercise>> = apiCall {
+        catalogApi.getAvailableExercises(environmentId).mapNotNull { it.toDomain() }
+    }
 }
 
 // 앱이 모르는 enum 값이 오면 그 항목만 건너뛴다
-private inline fun <reified T : Enum<T>> String.toEnumOrNull(): T? =
-    enumValues<T>().firstOrNull { it.name == this }
-
 private fun EquipmentResponseDto.toDomain(): Equipment? {
     return Equipment(
         code = equipmentCode,

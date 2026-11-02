@@ -31,3 +31,14 @@ internal suspend fun <T> apiCall(block: suspend () -> T): Result<T> =
     } catch (e: Exception) {
         Result.failure(FitMateException(null, UNKNOWN_ERROR_MESSAGE, e))
     }
+
+// 서버가 "데이터 없음"을 에러 코드(404)로 알려주는 조회. 그 코드면 실패 대신 null로 바꾼다
+internal fun <T> Result<T>.nullIfErrorCode(vararg codes: String): Result<T?> =
+    fold(
+        onSuccess = { Result.success(it) },
+        onFailure = { e -> if (e is FitMateException && e.code in codes) Result.success(null) else Result.failure(e) }
+    )
+
+// 앱이 모르는 enum 값이면 null
+internal inline fun <reified T : Enum<T>> String.toEnumOrNull(): T? =
+    enumValues<T>().firstOrNull { it.name == this }

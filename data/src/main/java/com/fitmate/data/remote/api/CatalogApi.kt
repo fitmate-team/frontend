@@ -17,4 +17,8 @@ interface CatalogApi {
         @Query("keyword") keyword: String? = null,
         @Query("muscle") muscle: String? = null
     ): List<ExerciseResponseDto>
+
+    // 운동 환경의 기구로 가능한 운동 (인증 필요)
+    @GET("api/exercises/available")
+    suspend fun getAvailableExercises(@Query("environmentId") environmentId: Long): List<ExerciseResponseDto>
 }
