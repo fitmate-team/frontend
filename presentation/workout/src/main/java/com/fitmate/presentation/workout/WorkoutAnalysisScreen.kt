@@ -152,8 +152,12 @@ fun WorkoutAnalysisScreen(
             shape = RoundedCornerShape(10.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Blue600)
         ) {
-            Text(if (hasNextRoutine) "다음 운동 제안 보기" else "저장하기",
-                fontFamily = FitMateFontFamily, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Text(
+                text = "다음 운동 제안 보기",
+                fontFamily = FitMateFontFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp
+            )
         }
     }
 }
