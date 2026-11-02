@@ -6,7 +6,10 @@ import com.fitmate.data.remote.FitMateJson
 import com.fitmate.data.remote.TokenAuthenticator
 import com.fitmate.data.remote.api.AuthApi
 import com.fitmate.data.remote.api.CatalogApi
+import com.fitmate.data.remote.api.MemberApi
+import com.fitmate.data.remote.api.RoutineApi
 import com.fitmate.data.remote.api.TokenApi
+import com.fitmate.data.remote.api.WorkoutRecordApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -29,9 +32,10 @@ annotation class TokenClient
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
+    // AI 루틴 생성 API는 응답까지 30초 가까이 걸려서 읽기 제한을 넉넉히 둔다
     private fun baseClientBuilder() = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
         .addInterceptor(
             HttpLoggingInterceptor().apply {
                 level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY else HttpLoggingInterceptor.Level.NONE
@@ -74,4 +78,16 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideCatalogApi(retrofit: Retrofit): CatalogApi = retrofit.create(CatalogApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideRoutineApi(retrofit: Retrofit): RoutineApi = retrofit.create(RoutineApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideMemberApi(retrofit: Retrofit): MemberApi = retrofit.create(MemberApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideWorkoutRecordApi(retrofit: Retrofit): WorkoutRecordApi = retrofit.create(WorkoutRecordApi::class.java)
 }

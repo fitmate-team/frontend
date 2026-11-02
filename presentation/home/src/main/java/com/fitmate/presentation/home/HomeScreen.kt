@@ -90,12 +90,14 @@ sealed interface TodayWorkout {
     data object None : TodayWorkout
 }
 
+// isLoading이면 섹션 제목만 보여주고 카드는 비워둔다
 data class HomeUiState(
     val weekly: WeeklyProgress?,
-    val today: TodayWorkout
+    val today: TodayWorkout,
+    val isLoading: Boolean = false
 )
 
-// 서버 연동 전까지 사용하는 예시 데이터
+// 미리보기용 예시 데이터
 val SampleHomeUiState = HomeUiState(
     weekly = WeeklyProgress(doneCount = 4, goalCount = 5, streakDays = 12),
     today = TodayWorkout.Planned(
@@ -152,7 +154,9 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(34.dp))
             Text(text = "이번 주 운동", style = SectionLabelStyle, color = TextPrimary)
-            if (state.weekly != null) {
+            if (state.isLoading) {
+                Spacer(modifier = Modifier.height(Spacing5))
+            } else if (state.weekly != null) {
                 Spacer(modifier = Modifier.height(Spacing4))
                 WeeklyProgressCard(progress = state.weekly)
             } else {
@@ -170,31 +174,33 @@ fun HomeScreen(
             Spacer(modifier = Modifier.height(if (hasPlannedWorkout) Spacing5 else 34.dp))
             Text(text = "오늘의 운동", style = SectionLabelStyle, color = TextPrimary)
             Spacer(modifier = Modifier.height(if (hasPlannedWorkout) Spacing4 else 14.dp))
-            when (val today = state.today) {
-                is TodayWorkout.Planned -> {
-                    TodayWorkoutCard(
-                        workout = today,
-                        onStartWorkout = onStartWorkout,
-                        onCompletedWorkoutClick = onCompletedWorkoutClick
-                    )
-                    if (!today.completed) {
-                        Spacer(modifier = Modifier.height(Spacing6))
-                        WatchConnectCard(onClick = onNavigateToWatchSync)
+            if (!state.isLoading) {
+                when (val today = state.today) {
+                    is TodayWorkout.Planned -> {
+                        TodayWorkoutCard(
+                            workout = today,
+                            onStartWorkout = onStartWorkout,
+                            onCompletedWorkoutClick = onCompletedWorkoutClick
+                        )
+                        if (!today.completed) {
+                            Spacer(modifier = Modifier.height(Spacing6))
+                            WatchConnectCard(onClick = onNavigateToWatchSync)
+                        }
                     }
+
+                    TodayWorkout.RestDay -> EmptyStateCard(
+                        icon = Icons.Rounded.FitnessCenter,
+                        title = "오늘은 운동하는 날이 아니에요.",
+                        description = "다음에 다시 만나요!"
+                    )
+
+                    TodayWorkout.None -> EmptyStateCard(
+                        icon = Icons.Rounded.FitnessCenter,
+                        title = "오늘의 운동이 없어요.",
+                        description = "이번 주 운동을 추가하면,\n오늘의 운동이 여기에 표시돼요.",
+                        action = { FitMatePrimaryButton(text = "운동 추가하기", onClick = onAddWorkout, height = 50.dp) }
+                    )
                 }
-
-                TodayWorkout.RestDay -> EmptyStateCard(
-                    icon = Icons.Rounded.FitnessCenter,
-                    title = "오늘은 운동하는 날이 아니에요.",
-                    description = "다음에 다시 만나요!"
-                )
-
-                TodayWorkout.None -> EmptyStateCard(
-                    icon = Icons.Rounded.FitnessCenter,
-                    title = "오늘의 운동이 없어요.",
-                    description = "이번 주 운동을 추가하면,\n오늘의 운동이 여기에 표시돼요.",
-                    action = { FitMatePrimaryButton(text = "운동 추가하기", onClick = onAddWorkout, height = 50.dp) }
-                )
             }
             Spacer(modifier = Modifier.height(Spacing6))
         }

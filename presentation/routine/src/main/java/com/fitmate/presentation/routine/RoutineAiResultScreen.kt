@@ -57,9 +57,9 @@ import com.fitmate.presentation.designsystem.theme.TextPrimary
 import com.fitmate.presentation.designsystem.theme.White
 import com.fitmate.presentation.designsystem.theme.fitMateTextStyle
 
-internal enum class PlanIcon { Upper, Lower, Cardio }
+enum class PlanIcon { Upper, Lower, Cardio }
 
-internal data class RecommendedDay(
+data class RecommendedDay(
     val dayLabel: String,
     val title: String,
     val exercises: String,
@@ -67,8 +67,8 @@ internal data class RecommendedDay(
     val icon: PlanIcon
 )
 
-// 서버 연동 전까지 사용하는 추천 결과 (예시)
-internal val SampleRecommendedDays = listOf(
+// 미리보기용 예시 데이터
+private val SampleRecommendedDays = listOf(
     RecommendedDay("월", "상체", "벤치프레스 · 숄더프레스 · 체스트프레스", "약 55분", PlanIcon.Upper),
     RecommendedDay("목", "하체", "스쿼트 · 레그프레스 · 레그컬", "약 60분", PlanIcon.Lower),
     RecommendedDay("금", "상체", "랫풀다운 · 시티드로우 · 바벨컬", "약 55분", PlanIcon.Upper),
@@ -85,9 +85,12 @@ internal fun PlanIcon.toIcon(): Pair<ImageVector, Dp> = when (this) {
 
 private val ReasonButtonShape = RoundedCornerShape(14.dp)
 
-// 3.6 이번 주 추천 루틴
+// 3.6 이번 주 추천 루틴. tags는 목표 / 운동 방식, summary는 "주 4회 · 회당 약 60분"
 @Composable
 fun RoutineAiResultScreen(
+    tags: List<String> = listOf("체지방 감량", "균형형"),
+    summary: String = "주 4회 · 회당 약 60분",
+    days: List<RecommendedDay> = SampleRecommendedDays,
     onOpenDay: (String) -> Unit = {},
     onUseRoutine: () -> Unit = {},
     onWhy: () -> Unit = {},
@@ -106,10 +109,10 @@ fun RoutineAiResultScreen(
                 .padding(horizontal = Spacing6)
         ) {
             Spacer(modifier = Modifier.height(Spacing6))
-            RecommendSummaryCard(tags = listOf("체지방 감량", "균형형"), summary = "주 4회 · 회당 약 60분")
+            RecommendSummaryCard(tags = tags, summary = summary)
             Spacer(modifier = Modifier.height(Spacing5))
             Column(verticalArrangement = Arrangement.spacedBy(Spacing2)) {
-                SampleRecommendedDays.forEach { day ->
+                days.forEach { day ->
                     val (icon, iconSize) = day.icon.toIcon()
                     WeeklyPlanDayCard(
                         dayLabel = day.dayLabel,
