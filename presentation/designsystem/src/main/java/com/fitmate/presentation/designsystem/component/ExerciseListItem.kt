@@ -1,3 +1,4 @@
+
 package com.fitmate.presentation.designsystem.component
 
 import androidx.compose.foundation.background
@@ -6,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -18,8 +20,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -42,7 +44,8 @@ import com.fitmate.presentation.designsystem.theme.fitMateTextStyle
 private val ExerciseIconShape = RoundedCornerShape(10.dp)
 
 // 루틴 운동 목록 항목
-// needWeight = true 이면 "중량 설정 필요" 배지 표시. 유산소처럼 휴식이 없으면 restTime = null
+// needWeight = true이면 "중량 설정 필요" 배지 표시
+// 휴식 시간이 없으면 restTime = null
 @Composable
 fun ExerciseListItem(
     order: String,
@@ -56,13 +59,15 @@ fun ExerciseListItem(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(94.dp)
+            .defaultMinSize(minHeight = 94.dp)
             .clip(ShapeLarge)
             .background(White)
             .border(1.dp, BorderDefault, ShapeLarge)
             .padding(Spacing4),
-        horizontalArrangement = Arrangement.spacedBy(14.dp)
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
+        // 운동 아이콘 및 순서
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -82,32 +87,45 @@ fun ExerciseListItem(
                     modifier = Modifier.size(18.dp)
                 )
             }
+
             Text(
                 text = order,
                 style = fitMateTextStyle(11.sp, 16.5.sp),
                 color = TextSecondary
             )
         }
-        Column(modifier = Modifier.weight(1f)) {
+
+        // 운동 이름, 세트 정보, 휴식 시간
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing2)
             ) {
                 Text(
                     text = name,
-                    style = fitMateTextStyle(15.sp, 22.5.sp, FontWeight.Bold),
+                    style = fitMateTextStyle(
+                        15.sp,
+                        22.5.sp,
+                        FontWeight.Bold
+                    ),
                     color = TextPrimary
                 )
+
                 if (needWeight) {
                     WeightRequiredBadge()
                 }
             }
+
             Text(
                 text = detail,
                 style = fitMateTextStyle(13.sp, 18.sp),
                 color = TextSecondary
             )
-            if (restTime != null) {
+
+            if (!restTime.isNullOrBlank()) {
                 Text(
                     text = restTime,
                     style = fitMateTextStyle(12.sp, 18.sp),
@@ -130,20 +148,45 @@ private fun WeightRequiredBadge() {
     ) {
         Text(
             text = "중량 설정 필요",
-            style = fitMateTextStyle(10.sp, 15.sp, FontWeight.Medium),
+            style = fitMateTextStyle(
+                10.sp,
+                15.sp,
+                FontWeight.Medium
+            ),
             color = White
         )
     }
 }
 
-@Preview
+@Preview(showBackground = true)
 @Composable
 private fun ExerciseListItemPreview() {
     FitMateTheme {
-        Column(verticalArrangement = Arrangement.spacedBy(Spacing3)) {
-            ExerciseListItem(order = "01", name = "벤치프레스", detail = "8회 × 4세트", restTime = "휴식 90초", needWeight = true)
-            ExerciseListItem(order = "01", name = "벤치프레스", detail = "40kg / 8회 × 4세트", restTime = "휴식 90초")
-            ExerciseListItem(order = "01", name = "벤치프레스", detail = "15분", restTime = "휴식 90초")
+        Column(
+            modifier = Modifier.padding(Spacing4),
+            verticalArrangement = Arrangement.spacedBy(Spacing3)
+        ) {
+            ExerciseListItem(
+                order = "01",
+                name = "벤치프레스",
+                detail = "8회 × 4세트",
+                restTime = "휴식 90초",
+                needWeight = true
+            )
+
+            ExerciseListItem(
+                order = "02",
+                name = "숄더프레스",
+                detail = "40kg / 8회 × 4세트",
+                restTime = "휴식 90초"
+            )
+
+            ExerciseListItem(
+                order = "03",
+                name = "러닝머신",
+                detail = "15분",
+                restTime = null
+            )
         }
     }
 }

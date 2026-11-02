@@ -45,7 +45,14 @@ private val ProgressMuted = Gray300
 private val ProgressBorder = Gray200
 private val ProgressSurface = Gray50
 
-/** durationSeconds가 있으면 세트가 없는 유산소 운동. */
+/** 운동 진행 화면에서 사용하는 운동 기준 유형. */
+enum class ExerciseBaselineType {
+    WEIGHT_REPS_SETS,
+    REPS_SETS,
+    DURATION
+}
+
+/** 기존 호출부와 호환되도록 baselineType을 마지막에 추가. */
 data class WorkoutProgressExercise(
     val id: Int,
     val name: String,
@@ -56,7 +63,8 @@ data class WorkoutProgressExercise(
     val durationSeconds: Int? = null,
     val guide: String = "허리를 곧게 펴고 올바른 자세를 유지해주세요.\n무리하지 않고 천천히 움직여주세요.",
     val bodyParts: List<String> = emptyList(),
-    val videoUrl: String = ""
+    val videoUrl: String = "",
+    val baselineType: ExerciseBaselineType = ExerciseBaselineType.WEIGHT_REPS_SETS
 )
 
 private enum class WorkoutPhase { ACTIVE, REST, FINISHED }
@@ -68,7 +76,15 @@ fun WorkoutProgressScreen(
         WorkoutProgressExercise(1, "벤치프레스", 40, 8, 4, 30, bodyParts = listOf("가슴", "삼두", "어깨")),
         WorkoutProgressExercise(2, "인클라인 덤벨프레스", 20, 8, 4, 30, bodyParts = listOf("가슴", "어깨")),
         WorkoutProgressExercise(3, "체스트프레스", 40, 8, 4, 30, bodyParts = listOf("가슴", "삼두")),
-        WorkoutProgressExercise(4, "줄넘기", durationSeconds = 15 * 60, bodyParts = listOf("전신"))
+        WorkoutProgressExercise(4, "줄넘기", durationSeconds = 15 * 60, bodyParts = listOf("전신")),
+        WorkoutProgressExercise(
+            id = 5,
+            name = "푸시업",
+            reps = 8,
+            sets = 4,
+            restSeconds = 30,
+            baselineType = ExerciseBaselineType.REPS_SETS
+        )
     ),
     onBack: () -> Unit = {},
     onFinish: (totalSeconds: Long) -> Unit = {},
@@ -97,7 +113,10 @@ fun WorkoutProgressScreen(
 
     val exercise = exercises[currentIndex]
     val completed = completedSets[exercise.id] ?: 0
-    val isCardio = exercise.durationSeconds != null
+    // 기존 durationSeconds 기반 유산소 데이터도 계속 지원.
+    val isCardio = exercise.durationSeconds != null ||
+            exercise.baselineType == ExerciseBaselineType.DURATION
+    val isRepsSets = exercise.baselineType == ExerciseBaselineType.REPS_SETS
     val isLast = currentIndex == exercises.lastIndex
     val allSetsDone = !isCardio && completed >= exercise.sets
 
@@ -140,7 +159,6 @@ fun WorkoutProgressScreen(
     }
 
     if (showAdjustment) {
-        // TODO: 서버의 다음 운동 추천 응답으로 교체하세요. 현재는 화면 연결용 예시입니다.
         val adjustmentItems = remember(exercises) {
             exercises.filter { it.durationSeconds == null }.map { item ->
                 val description = "${item.weightKg}kg × ${item.reps}회 × ${item.sets}세트"
@@ -338,73 +356,98 @@ fun WorkoutProgressScreen(
                         .padding(horizontal = 49.dp, vertical = 42.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // 운동 중량 × 반복 횟수
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.Bottom,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        // 40kg
+                    // REPS_SETS 유형은 횟수만, 기존 중량 운동은 중량 × 횟수를 표시.
+                    if (isRepsSets) {
                         Row(
-                            verticalAlignment = Alignment.Bottom
-                        ) {
-                            Text(
-                                text = "${exercise.weightKg}",
-                                color = ProgressBlue,
-                                fontFamily = FitMateNumberFontFamily,
-                                fontWeight = FontWeight.Normal,
-                                fontSize = 66.sp,
-                                lineHeight = 72.sp
-                            )
-
-                            Text(
-                                text = "kg",
-                                color = ProgressDark,
-                                fontFamily = FitMateFontFamily,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 20.sp,
-                                modifier = Modifier.padding(
-                                    start = 2.dp,
-                                    bottom = 10.dp
-                                )
-                            )
-                        }
-
-                        // ×
-                        Text(
-                            text = "×",
-                            color = ProgressMuted,
-                            fontFamily = FitMateFontFamily,
-                            fontWeight = FontWeight.Normal,
-                            fontSize = 51.sp,
-                            lineHeight = 58.sp,
-                            modifier = Modifier.padding(bottom = 3.dp)
-                        )
-
-                        // 8회
-                        Row(
-                            verticalAlignment = Alignment.Bottom
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.Bottom,
+                            horizontalArrangement = Arrangement.Center
                         ) {
                             Text(
                                 text = "${exercise.reps}",
                                 color = ProgressBlue,
                                 fontFamily = FitMateNumberFontFamily,
-                                fontWeight = FontWeight.Normal,
                                 fontSize = 66.sp,
                                 lineHeight = 72.sp
                             )
-
                             Text(
                                 text = "회",
                                 color = ProgressDark,
                                 fontFamily = FitMateFontFamily,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 20.sp,
-                                modifier = Modifier.padding(
-                                    start = 2.dp,
-                                    bottom = 10.dp
-                                )
+                                modifier = Modifier.padding(start = 4.dp, bottom = 10.dp)
                             )
+                        }
+                    } else {
+                        // 운동 중량 × 반복 횟수
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.Bottom,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            // 40kg
+                            Row(
+                                verticalAlignment = Alignment.Bottom
+                            ) {
+                                Text(
+                                    text = "${exercise.weightKg}",
+                                    color = ProgressBlue,
+                                    fontFamily = FitMateNumberFontFamily,
+                                    fontWeight = FontWeight.Normal,
+                                    fontSize = 66.sp,
+                                    lineHeight = 72.sp
+                                )
+
+                                Text(
+                                    text = "kg",
+                                    color = ProgressDark,
+                                    fontFamily = FitMateFontFamily,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 20.sp,
+                                    modifier = Modifier.padding(
+                                        start = 2.dp,
+                                        bottom = 10.dp
+                                    )
+                                )
+                            }
+
+                            // ×
+                            Text(
+                                text = "×",
+                                color = ProgressMuted,
+                                fontFamily = FitMateFontFamily,
+                                fontWeight = FontWeight.Normal,
+                                fontSize = 51.sp,
+                                lineHeight = 58.sp,
+                                modifier = Modifier.padding(bottom = 3.dp)
+                            )
+
+                            // 8회
+                            Row(
+                                verticalAlignment = Alignment.Bottom
+                            ) {
+                                Text(
+                                    text = "${exercise.reps}",
+                                    color = ProgressBlue,
+                                    fontFamily = FitMateNumberFontFamily,
+                                    fontWeight = FontWeight.Normal,
+                                    fontSize = 66.sp,
+                                    lineHeight = 72.sp
+                                )
+
+                                Text(
+                                    text = "회",
+                                    color = ProgressDark,
+                                    fontFamily = FitMateFontFamily,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 20.sp,
+                                    modifier = Modifier.padding(
+                                        start = 2.dp,
+                                        bottom = 10.dp
+                                    )
+                                )
+                            }
                         }
                     }
 
@@ -455,12 +498,20 @@ fun WorkoutProgressScreen(
                                             ),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        if (done || current) {
+                                        if (done) {
                                             Icon(
                                                 imageVector = Icons.Rounded.Check,
-                                                contentDescription = "세트 체크",
+                                                contentDescription = "완료된 세트",
                                                 tint = Color.White,
                                                 modifier = Modifier.size(18.dp)
+                                            )
+                                        } else if (current) {
+                                            Text(
+                                                text = "${index + 1}",
+                                                color = Color.White,
+                                                fontFamily = FitMateNumberFontFamily,
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Bold
                                             )
                                         }
                                     }
@@ -469,7 +520,6 @@ fun WorkoutProgressScreen(
 
                                     Text(
                                         text = when {
-                                            done -> "완료"
                                             current -> "진행"
                                             else -> "${index + 1}"
                                         },
@@ -725,6 +775,7 @@ private fun formatTime(seconds: Long): String {
     val safe = seconds.coerceAtLeast(0L)
     return "%02d:%02d:%02d".format(safe / 3600, (safe / 60) % 60, safe % 60)
 }
+
 
 
 
