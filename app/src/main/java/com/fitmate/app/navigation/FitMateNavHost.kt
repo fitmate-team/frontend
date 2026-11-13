@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -88,6 +89,8 @@ import com.fitmate.presentation.workout.WorkoutProgressScreen
 import com.fitmate.presentation.workout.WorkoutWeightSettingScreen
 import com.fitmate.presentation.workout.WorkoutAnalysisScreen
 import com.fitmate.presentation.workout.WorkoutAnalysisItem
+import com.fitmate.presentation.workout.WorkoutTimeChangeScreen
+
 import com.fitmate.presentation.mypage.BodyProfileEditScreen
 import com.fitmate.presentation.mypage.WorkoutEnvironmentSelectionScreen
 import com.fitmate.presentation.mypage.GymListScreen
@@ -132,6 +135,8 @@ fun FitMateNavHost() {
         mutableStateOf("")
     }
 
+    var selectedWorkoutMinutes by remember {
+        mutableIntStateOf(20)
     // 마이페이지
     var avoidedExercises by remember {
         mutableStateOf(listOf<String>())
@@ -376,11 +381,24 @@ fun FitMateNavHost() {
                 )
             }
 
+            composable("workout_time_change") {
+                WorkoutTimeChangeScreen(
+                    initialMinutes = selectedWorkoutMinutes,
+                    onBack = {
+                        navController.popBackStack()
+                    },
+                    onNext = { minutes ->
+                        selectedWorkoutMinutes = minutes
+                        navController.navigate(Route.WORKOUT_LOCATION)
+                    }
+                )
+            }
+
             // 오늘의 운동
             composable(Route.WORKOUT) {
                 TodayWorkoutScreen(
                     onChangeLocation = {
-                        navController.navigate(Route.WORKOUT_LOCATION)
+                        navController.navigate("workout_time_change")
                     },
 
                     onWeightSettingClick = { index ->
