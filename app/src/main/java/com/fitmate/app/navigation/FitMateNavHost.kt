@@ -7,6 +7,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -58,7 +59,6 @@ import com.fitmate.presentation.mypage.AppSettingsScreen
 import com.fitmate.presentation.mypage.BodyProfileScreen
 import com.fitmate.presentation.mypage.HomeEquipmentEditScreen
 import com.fitmate.presentation.mypage.MyPageScreen
-import com.fitmate.presentation.mypage.WorkoutEnvironmentScreen
 import com.fitmate.presentation.record.RecordScreen
 
 import com.fitmate.presentation.routine.AiHandsOffSetupScreen
@@ -92,7 +92,20 @@ import com.fitmate.presentation.workout.WorkoutProgressScreen
 import com.fitmate.presentation.workout.WorkoutWeightSettingScreen
 import com.fitmate.presentation.workout.WorkoutAnalysisScreen
 import com.fitmate.presentation.workout.WorkoutAnalysisItem
+import com.fitmate.presentation.workout.WorkoutTimeChangeScreen
 
+import com.fitmate.presentation.mypage.BodyProfileEditScreen
+import com.fitmate.presentation.mypage.WorkoutEnvironmentSelectionScreen
+import com.fitmate.presentation.mypage.GymListScreen
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.fitmate.presentation.mypage.GymEditScreen
+import com.fitmate.presentation.mypage.GymInfo
+import com.fitmate.presentation.mypage.GymListScreen
+import com.fitmate.presentation.mypage.OutdoorEquipmentEditScreen
+import com.fitmate.presentation.mypage.initialGymList
 
 @Composable
 fun FitMateNavHost() {
@@ -115,9 +128,38 @@ fun FitMateNavHost() {
     // 루틴 탭에서 연 요일 상세 (요일 문구)
     var routineDetailDayLabel by remember { mutableStateOf("월") }
     var mypageEquipmentEditTitle by remember { mutableStateOf("홈트 기구 편집") }
+    var routineCondition by remember { mutableStateOf(SampleRoutineCondition) }
 
     var selectedWorkoutTitle by remember {
         mutableStateOf("")
+    }
+
+    var selectedWorkoutMinutes by remember {
+        mutableIntStateOf(20)
+    // 마이페이지
+    var avoidedExercises by remember {
+        mutableStateOf(listOf<String>())
+    }
+    var gyms by remember {
+        mutableStateOf(initialGymList)
+    }
+    var homeEquipment by remember {
+        mutableStateOf(
+            listOf(
+                "덤벨",
+                "케틀벨",
+                "저항 밴드",
+                "파워랙/스쿼트랙",
+                "줄넘기",
+                "엘립티컬"
+            )
+        )
+    }
+
+    var outdoorEquipment by remember {
+        mutableStateOf(
+            listOf("줄넘기")
+        )
     }
 
     Scaffold(
@@ -134,7 +176,7 @@ fun FitMateNavHost() {
 
         NavHost(
             navController = navController,
-            startDestination = Route.LOGIN,
+            startDestination = Route.MYPAGE,
             modifier = Modifier.padding(innerPadding),
 
             // 화면 전환 애니메이션 제거
@@ -212,11 +254,24 @@ fun FitMateNavHost() {
                 }
             }
 
+            composable("workout_time_change") {
+                WorkoutTimeChangeScreen(
+                    initialMinutes = selectedWorkoutMinutes,
+                    onBack = {
+                        navController.popBackStack()
+                    },
+                    onNext = { minutes ->
+                        selectedWorkoutMinutes = minutes
+                        navController.navigate(Route.WORKOUT_LOCATION)
+                    }
+                )
+            }
+
             // 오늘의 운동
             composable(Route.WORKOUT) {
                 TodayWorkoutScreen(
                     onChangeLocation = {
-                        navController.navigate(Route.WORKOUT_LOCATION)
+                        navController.navigate("workout_time_change")
                     },
 
                     onWeightSettingClick = { index ->
@@ -441,14 +496,26 @@ fun FitMateNavHost() {
             }
 
 
+
             composable(Route.MYPAGE) {
                 MyPageScreen(
                     onOpenMenu = { menu ->
                         when (menu) {
-                            "내 신체정보" -> navController.navigate(Route.MYPAGE_BODY_PROFILE)
-                            "내 운동환경" -> navController.navigate(Route.MYPAGE_WORKOUT_ENVIRONMENT)
-                            "AI Trainer 설정" -> navController.navigate(Route.MYPAGE_AI_TRAINER_SETTINGS)
-                            "앱 설정" -> navController.navigate(Route.MYPAGE_APP_SETTINGS)
+                            "운동 프로필" -> {
+                                navController.navigate(Route.MYPAGE_BODY_PROFILE)
+                            }
+
+                            "내 운동 환경" -> {
+                                navController.navigate(Route.MYPAGE_WORKOUT_ENVIRONMENT)
+                            }
+
+                            "AI Trainer 설정" -> {
+                                navController.navigate(Route.MYPAGE_AI_TRAINER_SETTINGS)
+                            }
+
+                            "앱 설정" -> {
+                                navController.navigate(Route.MYPAGE_APP_SETTINGS)
+                            }
                         }
                     }
                 )
@@ -457,29 +524,138 @@ fun FitMateNavHost() {
             composable(Route.MYPAGE_BODY_PROFILE) {
                 BodyProfileScreen(
                     onBack = { navController.popBackStack() },
-                    onSave = { navController.popBackStack() }
-                )
-            }
-
-            composable(Route.MYPAGE_WORKOUT_ENVIRONMENT) {
-                WorkoutEnvironmentScreen(
-                    onBack = { navController.popBackStack() },
-                    onEditGym = {
-                        mypageEquipmentEditTitle = "헬스장 기구 편집"
-                        navController.navigate(Route.MYPAGE_HOME_EQUIPMENT_EDIT)
-                    },
-                    onEditHome = {
-                        mypageEquipmentEditTitle = "홈트 기구 편집"
-                        navController.navigate(Route.MYPAGE_HOME_EQUIPMENT_EDIT)
+                    onSave = {
+                        navController.navigate("mypage_body_profile_edit")
                     }
                 )
             }
 
-            composable(Route.MYPAGE_HOME_EQUIPMENT_EDIT) {
-                HomeEquipmentEditScreen(
-                    title = mypageEquipmentEditTitle,
-                    onBack = { navController.popBackStack() },
-                    onSave = { navController.popBackStack() }
+            composable("mypage_body_profile_edit") {
+                BodyProfileEditScreen(
+                    onBack = {
+                        navController.popBackStack()
+                    },
+                    onSave = {
+                        navController.popBackStack()
+                    },
+                    avoidedExercises = avoidedExercises,
+                    onOpenExerciseSelect = {
+                        navController.navigate("mypage_avoid_exercise_select")
+                    },
+                    onRemoveExercise = { exercise ->
+                        avoidedExercises = avoidedExercises - exercise
+                    }
+                )
+            }
+
+            composable("mypage_avoid_exercise_select") {
+                WorkoutExerciseSelectScreen(
+                    initialSelectedIds = emptySet(),
+                    buttonLabel = "다음",
+                    onBack = {
+                        navController.popBackStack()
+                    },
+                    onNext = { selectedExercises ->
+                        avoidedExercises = selectedExercises.map { it.name }
+                        navController.popBackStack()
+                    }
+                )
+            }
+
+
+            composable(Route.MYPAGE_WORKOUT_ENVIRONMENT) {
+                WorkoutEnvironmentSelectionScreen(
+                    onBack = {
+                        navController.popBackStack()
+                    },
+                    onOpenGym = {
+                        navController.navigate("mypage_gym_list")
+                    },
+                    onOpenHome = {
+                        navController.navigate("mypage_home_equipment_edit")
+                    },
+                    onOpenOutdoor = {
+                        navController.navigate("mypage_outdoor_equipment_edit")
+                    }
+                )
+            }
+
+
+            composable("mypage_gym_list") {
+                GymListScreen(
+                    gyms = gyms,
+                    onBack = {
+                        navController.popBackStack()
+                    },
+                    onEditGym = { gymId ->
+                        navController.navigate("mypage_gym_edit/$gymId")
+                    },
+                    onAddGym = {
+                        navController.navigate("mypage_gym_add")
+                    },
+                    onToggleFavorite = { gymId ->
+                        gyms = gyms.map { gym ->
+                            if (gym.id == gymId) {
+                                gym.copy(
+                                    isFavorite = !gym.isFavorite
+                                )
+                            } else {
+                                gym
+                            }
+                        }
+                    }
+                )
+            }
+
+            composable("mypage_gym_edit/{gymId}") { entry ->
+                val gymId = entry.arguments
+                    ?.getString("gymId")
+                    ?.toIntOrNull()
+
+                val gym = gyms.firstOrNull { it.id == gymId }
+
+                if (gym != null) {
+                    GymEditScreen(
+                        isAddMode = false,
+                        initialName = gym.name,
+                        initialEquipment = gym.equipment,
+                        onBack = {
+                            navController.popBackStack()
+                        },
+                        onSave = { name, equipment ->
+                            gyms = gyms.map {
+                                if (it.id == gym.id) {
+                                    it.copy(
+                                        name = name,
+                                        equipment = equipment
+                                    )
+                                } else {
+                                    it
+                                }
+                            }
+                            navController.popBackStack()
+                        }
+                    )
+                }
+            }
+
+            composable("mypage_gym_add") {
+                GymEditScreen(
+                    isAddMode = true,
+                    onBack = {
+                        navController.popBackStack()
+                    },
+                    onSave = { name, equipment ->
+                        val newId = (gyms.maxOfOrNull { it.id } ?: 0) + 1
+
+                        gyms = gyms + GymInfo(
+                            id = newId,
+                            name = name,
+                            equipment = equipment
+                        )
+
+                        navController.popBackStack()
+                    }
                 )
             }
 
@@ -502,6 +678,32 @@ fun FitMateNavHost() {
                         navController.navigate(Route.LOGIN) {
                             popUpTo(0) { inclusive = true }
                         }
+                    }
+                )
+            }
+
+            composable("mypage_home_equipment_edit") {
+                HomeEquipmentEditScreen(
+                    initialEquipment = homeEquipment,
+                    onBack = {
+                        navController.popBackStack()
+                    },
+                    onSave = { updatedEquipment ->
+                        homeEquipment = updatedEquipment
+                        navController.popBackStack()
+                    }
+                )
+            }
+
+            composable("mypage_outdoor_equipment_edit") {
+                OutdoorEquipmentEditScreen(
+                    initialEquipment = outdoorEquipment,
+                    onBack = {
+                        navController.popBackStack()
+                    },
+                    onSave = { updatedEquipment ->
+                        outdoorEquipment = updatedEquipment
+                        navController.popBackStack()
                     }
                 )
             }
