@@ -103,6 +103,7 @@ import com.fitmate.presentation.mypage.GymInfo
 import com.fitmate.presentation.mypage.GymListScreen
 import com.fitmate.presentation.mypage.OutdoorEquipmentEditScreen
 import com.fitmate.presentation.mypage.initialGymList
+import com.fitmate.presentation.routine.SampleRoutineCondition
 
 @Composable
 fun FitMateNavHost() {
@@ -136,7 +137,8 @@ fun FitMateNavHost() {
     }
 
     var selectedWorkoutMinutes by remember {
-        mutableIntStateOf(20)
+        mutableIntStateOf(20)}
+
     // 마이페이지
     var avoidedExercises by remember {
         mutableStateOf(listOf<String>())
