@@ -33,7 +33,6 @@ import com.fitmate.presentation.designsystem.component.ExerciseListItem
 import com.fitmate.presentation.designsystem.component.FitMatePrimaryButton
 import com.fitmate.presentation.designsystem.component.FitMateTitleTopBar
 import com.fitmate.presentation.designsystem.component.SoftIconBox
-import com.fitmate.presentation.designsystem.component.WeekDayLabels
 import com.fitmate.presentation.designsystem.component.WorkoutStat
 import com.fitmate.presentation.designsystem.component.WorkoutStatsRow
 import com.fitmate.presentation.designsystem.theme.BorderDefault
@@ -49,49 +48,58 @@ import com.fitmate.presentation.designsystem.theme.TextSecondary
 import com.fitmate.presentation.designsystem.theme.White
 import com.fitmate.presentation.designsystem.theme.fitMateTextStyle
 
-private data class PlannedExercise(
+// 운동 목록 한 줄. detail은 "40kg / 8회 × 4세트" / "15분" 같은 처방 문구
+data class PlannedExercise(
     val name: String,
     val detail: String,
     val restTime: String?,
     val needWeight: Boolean = false,
-    val icon: ImageVector = Icons.Rounded.FitnessCenter
-)
-
-// 서버 연동 전까지 사용하는 예시 데이터
-private val SampleExercises = listOf(
-    PlannedExercise("벤치프레스", "8회 × 4세트", "휴식 90초", needWeight = true),
-    PlannedExercise("숄더프레스", "40kg / 8회 × 4세트", "휴식 90초"),
-    PlannedExercise("체스트프레스", "8회 × 4세트", "휴식 90초", needWeight = true),
-    PlannedExercise("레터럴레이즈", "20kg / 8회 × 4세트", "휴식 90초"),
-    PlannedExercise("러닝머신", "15분", null, icon = Icons.AutoMirrored.Rounded.DirectionsRun)
-)
-
-// 예시 날짜 (이번 주 9월 21일 월요일 ~ 27일 일요일). 오늘은 월요일
-private const val TODAY_LABEL = "월"
-private fun dateLabelOf(dayLabel: String): String {
-    val index = WeekDayLabels.indexOf(dayLabel).coerceAtLeast(0)
-    return "9월 ${21 + index}일 ($dayLabel)"
+    val isCardio: Boolean = false
+) {
+    val icon: ImageVector get() = if (isCardio) Icons.AutoMirrored.Rounded.DirectionsRun else Icons.Rounded.FitnessCenter
 }
+
+// 요일 루틴 상세에 보여줄 내용. estimatedMinutes가 null이면 예상 시간 칸을 빼고 보여준다
+data class RoutineDayDetailUi(
+    val title: String,
+    val dateLabel: String,
+    val estimatedMinutes: Int?,
+    val averageRestSeconds: Int,
+    val exercises: List<PlannedExercise>
+)
+
+// 미리보기용 예시 데이터
+private val SampleDayDetail = RoutineDayDetailUi(
+    title = "상체",
+    dateLabel = "9월 21일 (월)",
+    estimatedMinutes = 55,
+    averageRestSeconds = 60,
+    exercises = listOf(
+        PlannedExercise("벤치프레스", "8회 × 4세트", "휴식 90초", needWeight = true),
+        PlannedExercise("숄더프레스", "40kg / 8회 × 4세트", "휴식 90초"),
+        PlannedExercise("체스트프레스", "8회 × 4세트", "휴식 90초", needWeight = true),
+        PlannedExercise("레터럴레이즈", "20kg / 8회 × 4세트", "휴식 90초"),
+        PlannedExercise("러닝머신", "15분", null, isCardio = true)
+    )
+)
 
 // 3.2 오늘의 운동. 오늘이면 운동 장소 / 중량 설정 필요 배지 / 시작하기 버튼을 보여준다
 @Composable
 fun WorkoutDetailScreen(
-    dayLabel: String = TODAY_LABEL,
-    gymName: String = "Fit Gym",
+    detail: RoutineDayDetailUi = SampleDayDetail,
+    isToday: Boolean = true,
+    placeLabel: String = "Fit Gym",
     onBack: () -> Unit = {},
     onChangePlace: () -> Unit = {},
     onStartWorkout: () -> Unit = {}
 ) {
-    val isToday = dayLabel == TODAY_LABEL
     RoutineDayDetail(
         topBarTitle = "오늘의 운동",
-        dayLabel = dayLabel,
-        stats = listOf(WorkoutStat("55분", "예상 시간"), WorkoutStat("5종목", "운동 종목"), WorkoutStat("60초", "평균 휴식")),
-        exercises = SampleExercises,
+        detail = detail,
         showWeightBadges = isToday,
         onBack = onBack,
         topBarAction = if (isToday) {
-            { PlaceChip(place = gymName, onClick = onChangePlace) }
+            { PlaceChip(place = placeLabel, onClick = onChangePlace) }
         } else {
             null
         },
@@ -102,14 +110,12 @@ fun WorkoutDetailScreen(
 // 3.6 이번 주 추천 루틴 - 일자별 미리보기
 @Composable
 fun RoutineDayPreviewScreen(
-    dayLabel: String = TODAY_LABEL,
+    detail: RoutineDayDetailUi = SampleDayDetail,
     onBack: () -> Unit = {}
 ) {
     RoutineDayDetail(
         topBarTitle = "미리보기",
-        dayLabel = dayLabel,
-        stats = listOf(WorkoutStat("55분", "예상 시간"), WorkoutStat("5종목", "운동 종목"), WorkoutStat("60초", "평균 휴식")),
-        exercises = SampleExercises,
+        detail = detail,
         showWeightBadges = true,
         onBack = onBack
     )
@@ -122,24 +128,16 @@ fun ManualDayDetailScreen(
     exercises: List<ExerciseSetting> = emptyList(),
     onBack: () -> Unit = {}
 ) {
-    val planned = if (exercises.isEmpty()) SampleExercises else exercises.map { it.toPlannedExercise() }
+    val detail = if (exercises.isEmpty()) {
+        SampleDayDetail.copy(estimatedMinutes = null)
+    } else {
+        manualDayDetailOf(dayLabel, exercises)
+    }
     RoutineDayDetail(
         topBarTitle = "오늘의 운동",
-        dayLabel = dayLabel,
-        stats = listOf(WorkoutStat("${planned.size}종목", "운동 종목"), WorkoutStat("60초", "평균 휴식")),
-        exercises = planned,
+        detail = detail,
         showWeightBadges = false,
         onBack = onBack
-    )
-}
-
-private fun ExerciseSetting.toPlannedExercise(): PlannedExercise {
-    val repsAndSets = "${reps.ifBlank { "-" }}회 × ${sets.ifBlank { "-" }}세트"
-    return PlannedExercise(
-        name = shortNameOf(name),
-        detail = if (weight.isBlank()) repsAndSets else "${weight}kg / $repsAndSets",
-        restTime = rest?.let { "휴식 $it" },
-        needWeight = weight.isBlank()
     )
 }
 
@@ -147,9 +145,7 @@ private fun ExerciseSetting.toPlannedExercise(): PlannedExercise {
 @Composable
 private fun RoutineDayDetail(
     topBarTitle: String,
-    dayLabel: String,
-    stats: List<WorkoutStat>,
-    exercises: List<PlannedExercise>,
+    detail: RoutineDayDetailUi,
     showWeightBadges: Boolean,
     onBack: () -> Unit,
     topBarAction: (@Composable () -> Unit)? = null,
@@ -175,23 +171,23 @@ private fun RoutineDayDetail(
                 SoftIconBox(icon = Icons.Rounded.FitnessCenter)
                 Spacer(modifier = Modifier.width(Spacing3))
                 Text(
-                    text = "상체",
+                    text = detail.title,
                     style = fitMateTextStyle(20.sp, 20.sp, FontWeight.Bold),
                     color = TextPrimary,
                     modifier = Modifier.weight(1f)
                 )
                 Text(
-                    text = dateLabelOf(dayLabel),
+                    text = detail.dateLabel,
                     style = fitMateTextStyle(12.sp, 20.sp),
                     color = TextSecondary,
                     modifier = Modifier.align(Alignment.Top)
                 )
             }
             Spacer(modifier = Modifier.height(Spacing4))
-            WorkoutStatsRow(stats = stats)
+            WorkoutStatsRow(stats = detail.stats())
             Spacer(modifier = Modifier.height(21.dp))
             Column(verticalArrangement = Arrangement.spacedBy(Spacing2)) {
-                exercises.forEachIndexed { index, exercise ->
+                detail.exercises.forEachIndexed { index, exercise ->
                     ExerciseListItem(
                         order = "%02d".format(index + 1),
                         name = exercise.name,
@@ -214,6 +210,12 @@ private fun RoutineDayDetail(
         }
     }
 }
+
+private fun RoutineDayDetailUi.stats(): List<WorkoutStat> = listOfNotNull(
+    estimatedMinutes?.let { WorkoutStat("${it}분", "예상 시간") },
+    WorkoutStat("${exercises.size}종목", "운동 종목"),
+    WorkoutStat("${averageRestSeconds}초", "평균 휴식")
+)
 
 // 상단 바 오른쪽 운동 장소 표시 (누르면 장소 변경)
 @Composable
@@ -248,7 +250,7 @@ private fun WorkoutDetailScreenPreview() {
 @Preview(name = "비운동일", widthDp = 394, heightDp = 812)
 @Composable
 private fun WorkoutDetailScreenOtherDayPreview() {
-    FitMateTheme { WorkoutDetailScreen(dayLabel = "화") }
+    FitMateTheme { WorkoutDetailScreen(isToday = false) }
 }
 
 @Preview(name = "미리보기", widthDp = 394, heightDp = 892)

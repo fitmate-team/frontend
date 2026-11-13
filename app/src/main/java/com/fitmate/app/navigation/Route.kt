@@ -32,6 +32,8 @@ object Route {
     const val WATCH_SYNC_RESULT = "home/watch-sync-result"
 
     // Routine
+    // 루틴 만들기 화면을 묶는 그래프. 그래프 범위로 RoutineCreateViewModel을 공유한다
+    const val ROUTINE_CREATE_GRAPH = "routine/create"
     const val ROUTINE_CREATE_METHOD = "routine/create-method"
     const val ROUTINE_AI_HANDSOFF_SETUP = "routine/ai-handsoff-setup"
     const val ROUTINE_PLACE_CHANGE = "routine/place-change"
@@ -45,6 +47,7 @@ object Route {
     const val ROUTINE_MANUAL_DAY_SELECT = "routine/manual-day-select"
     const val ROUTINE_MANUAL_EXERCISE_SELECT = "routine/manual-exercise-select"
     const val ROUTINE_EXERCISE_CONFIG = "routine/exercise-config"
+    const val ROUTINE_MANUAL_SAVING = "routine/manual-saving"
     const val ROUTINE_WORKOUT_DETAIL = "routine/workout-detail"
 
     // Workout

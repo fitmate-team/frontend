@@ -5,6 +5,7 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -49,9 +50,9 @@ import com.fitmate.presentation.auth.WorkoutEnvironmentScreen
 import com.fitmate.presentation.auth.WorkoutGoalScreen
 import com.fitmate.presentation.auth.WorkoutMethodScreen
 import com.fitmate.presentation.auth.WorkoutScheduleScreen
+import com.fitmate.presentation.home.HomeMessageEffect
 import com.fitmate.presentation.home.HomeScreen
-import com.fitmate.presentation.home.HomeUiState
-import com.fitmate.presentation.home.TodayWorkout
+import com.fitmate.presentation.home.HomeViewModel
 import com.fitmate.presentation.home.WatchSyncResultScreen
 import com.fitmate.presentation.mypage.AiTrainerSettingsScreen
 import com.fitmate.presentation.mypage.AppSettingsScreen
@@ -70,12 +71,14 @@ import com.fitmate.presentation.routine.RoutineAiResultScreen
 import com.fitmate.presentation.routine.RoutineCreationMethodScreen
 import com.fitmate.presentation.routine.RoutineDayPreviewScreen
 import com.fitmate.presentation.routine.ManualDayDetailScreen
-import com.fitmate.presentation.routine.ManualRoutineDraft
-import com.fitmate.presentation.routine.AiRecommendedExerciseNames
 import com.fitmate.presentation.routine.RoutinePlaceChangeScreen
 import com.fitmate.presentation.routine.RoutineScheduleChangeScreen
-import com.fitmate.presentation.routine.SampleRoutineCondition
+import com.fitmate.presentation.routine.RoutineCreateEventEffect
+import com.fitmate.presentation.routine.RoutineCreateUiState
+import com.fitmate.presentation.routine.RoutineCreateViewModel
+import com.fitmate.presentation.routine.RoutineEventEffect
 import com.fitmate.presentation.routine.RoutineScreen
+import com.fitmate.presentation.routine.RoutineViewModel
 import com.fitmate.presentation.routine.WorkoutDetailScreen
 import com.fitmate.presentation.workout.SelectableExercise
 import com.fitmate.presentation.workout.WorkoutLocationScreen
@@ -122,13 +125,9 @@ fun FitMateNavHost() {
     }
     val showBottomBar = bottomBarTabKey != null
 
-    // 루틴 수동 생성 위저드 동안 화면 간에 공유되는 선택 상태
-    // 루틴 직접 만들기 (AI와 함께 만들기) 동안 화면 간에 공유되는 상태
-    var manualRoutineDraft by remember { mutableStateOf(ManualRoutineDraft()) }
-    var manualEditingDay by remember { mutableStateOf("월") }
-    var manualSelectedExercises by remember { mutableStateOf(listOf<String>()) }
-    var routinePreviewDayLabel by remember { mutableStateOf("월") }
+    // 루틴 탭에서 연 요일 상세 (요일 문구)
     var routineDetailDayLabel by remember { mutableStateOf("월") }
+    var mypageEquipmentEditTitle by remember { mutableStateOf("홈트 기구 편집") }
     var routineCondition by remember { mutableStateOf(SampleRoutineCondition) }
 
     var selectedWorkoutTitle by remember {
@@ -195,10 +194,14 @@ fun FitMateNavHost() {
             }
         ) {
 
-            // 루틴 생성 API 연동 전이라 홈 / 루틴은 루틴 생성 이전 상태로 보여준다
+            // 홈 / 루틴 탭은 들어올 때마다 서버에서 다시 불러온다
             composable(Route.HOME) {
+                val viewModel: HomeViewModel = hiltViewModel()
+                val state by viewModel.uiState.collectAsStateWithLifecycle()
+                LaunchedEffect(viewModel) { viewModel.refresh() }
+                HomeMessageEffect(viewModel)
                 HomeScreen(
-                    state = HomeUiState(weekly = null, today = TodayWorkout.None),
+                    state = state,
                     onStartWorkout = { navController.navigate(Route.WORKOUT) },
                     onAddWorkout = { navController.navigateToTab(Route.ROUTINE) },
                     onNavigateToWatchSync = { navController.navigate(Route.WATCH_SYNC_RESULT) }
@@ -213,172 +216,42 @@ fun FitMateNavHost() {
             }
 
             composable(Route.ROUTINE) {
+                val viewModel: RoutineViewModel = hiltViewModel()
+                val state by viewModel.uiState.collectAsStateWithLifecycle()
+                LaunchedEffect(viewModel) { viewModel.refresh() }
+                RoutineEventEffect(viewModel)
                 RoutineScreen(
-                    routine = null,
-                    onCreateRoutine = { navController.navigate(Route.ROUTINE_CREATE_METHOD) },
+                    routine = state.routine,
+                    isLoading = state.isLoading,
+                    onCreateRoutine = { navController.navigate(Route.ROUTINE_CREATE_GRAPH) },
                     onOpenDay = { day ->
-                        routineDetailDayLabel = day
-                        navController.navigate(Route.ROUTINE_WORKOUT_DETAIL)
-                    }
-                )
-            }
-
-            composable(Route.ROUTINE_CREATE_METHOD) {
-                RoutineCreationMethodScreen(
-                    onBack = { navController.popBackStack() },
-                    onAiHandsOff = { navController.navigate(Route.ROUTINE_AI_HANDSOFF_SETUP) },
-                    onAiTogether = { navController.navigate(Route.ROUTINE_MANUAL_DAY_SELECT) }
-                )
-            }
-
-            composable(Route.ROUTINE_AI_HANDSOFF_SETUP) {
-                AiHandsOffSetupScreen(
-                    condition = routineCondition,
-                    onBack = { navController.popBackStack() },
-                    onEditSchedule = { navController.navigate(Route.ROUTINE_SCHEDULE_CHANGE) },
-                    onEditPlace = { navController.navigate(Route.ROUTINE_PLACE_CHANGE) },
-                    onGenerate = { navController.navigate(Route.ROUTINE_AI_LOADING) }
-                )
-            }
-
-            composable(Route.ROUTINE_PLACE_CHANGE) {
-                RoutinePlaceChangeScreen(
-                    condition = routineCondition,
-                    onBack = { navController.popBackStack() },
-                    onDone = { updated ->
-                        routineCondition = updated
-                        navController.popBackStack()
-                    }
-                )
-            }
-
-            composable(Route.ROUTINE_SCHEDULE_CHANGE) {
-                RoutineScheduleChangeScreen(
-                    condition = routineCondition,
-                    onBack = { navController.popBackStack() },
-                    onDone = { updated ->
-                        routineCondition = updated
-                        navController.popBackStack()
-                    }
-                )
-            }
-
-            composable(Route.ROUTINE_AI_LOADING) {
-                RoutineAiLoadingScreen(
-                    onComplete = {
-                        navController.navigate(Route.ROUTINE_AI_RESULT) {
-                            popUpTo(Route.ROUTINE_AI_LOADING) { inclusive = true }
+                        // 쉬는 날은 상세가 없다
+                        if (day in state.dayDetails) {
+                            routineDetailDayLabel = day
+                            navController.navigate(Route.ROUTINE_WORKOUT_DETAIL)
                         }
                     }
                 )
             }
 
-            composable(Route.ROUTINE_AI_RESULT) {
-                RoutineAiResultScreen(
-                    onOpenDay = { day ->
-                        routinePreviewDayLabel = day
-                        navController.navigate(Route.ROUTINE_AI_DAY_PREVIEW)
-                    },
-                    onUseRoutine = {
-                        navController.navigate(Route.ROUTINE) {
-                            popUpTo(Route.ROUTINE) { inclusive = false }
-                        }
-                    },
-                    onWhy = { navController.navigate(Route.ROUTINE_AI_REASON) },
-                    onRegenerate = { navController.navigate(Route.ROUTINE_AI_LOADING) }
-                )
-            }
+            routineCreateGraph(navController)
 
-            composable(Route.ROUTINE_AI_DAY_PREVIEW) {
-                RoutineDayPreviewScreen(
-                    dayLabel = routinePreviewDayLabel,
-                    onBack = { navController.popBackStack() }
-                )
-            }
-
-            composable(Route.ROUTINE_AI_REASON) {
-                RoutineAiReasonScreen(
-                    onBack = { navController.popBackStack() },
-                    onConfirm = { navController.popBackStack() }
-                )
-            }
-
-            composable(Route.ROUTINE_MANUAL_DAY_SELECT) {
-                ManualDaySelectionScreen(
-                    draft = manualRoutineDraft,
-                    onBack = { navController.popBackStack() },
-                    onDayClick = { day ->
-                        manualEditingDay = day
-                        manualSelectedExercises = manualRoutineDraft.days[day].orEmpty().map { it.name }
-                        navController.navigate(Route.ROUTINE_MANUAL_EXERCISE_SELECT)
-                    },
-                    onOpenDay = { day ->
-                        manualEditingDay = day
-                        navController.navigate(Route.ROUTINE_MANUAL_DAY_DETAIL)
-                    },
-                    onSave = {
-                        navController.navigate(Route.ROUTINE) {
-                            popUpTo(Route.ROUTINE) { inclusive = false }
-                        }
-                    }
-                )
-            }
-
-            composable(Route.ROUTINE_MANUAL_EXERCISE_SELECT) {
-                ManualExerciseSelectionScreen(
-                    initialSelected = manualSelectedExercises,
-                    onBack = { navController.popBackStack() },
-                    onAiRecommend = { navController.navigate(Route.ROUTINE_MANUAL_AI_LOADING) },
-                    onNext = { exercises ->
-                        manualSelectedExercises = exercises
-                        navController.navigate(Route.ROUTINE_EXERCISE_CONFIG)
-                    }
-                )
-            }
-
-            // AI 추천이 끝나면 추천 운동이 선택된 검색 화면으로 돌아간다
-            composable(Route.ROUTINE_MANUAL_AI_LOADING) {
-                RoutineAiLoadingScreen(
-                    onComplete = {
-                        manualSelectedExercises = AiRecommendedExerciseNames
-                        navController.navigate(Route.ROUTINE_MANUAL_EXERCISE_SELECT) {
-                            popUpTo(Route.ROUTINE_MANUAL_EXERCISE_SELECT) { inclusive = true }
-                        }
-                    }
-                )
-            }
-
-            composable(Route.ROUTINE_EXERCISE_CONFIG) {
-                ExerciseConfigurationScreen(
-                    exercises = manualSelectedExercises,
-                    initialSettings = manualRoutineDraft.days[manualEditingDay].orEmpty(),
-                    onBack = { navController.popBackStack() },
-                    onDone = { settings ->
-                        manualRoutineDraft = manualRoutineDraft.copy(days = manualRoutineDraft.days + (manualEditingDay to settings))
-                        navController.navigate(Route.ROUTINE_MANUAL_DAY_SELECT) {
-                            popUpTo(Route.ROUTINE_MANUAL_DAY_SELECT) { inclusive = false }
-                            launchSingleTop = true
-                        }
-                    }
-                )
-            }
-
-            composable(Route.ROUTINE_MANUAL_DAY_DETAIL) {
-                ManualDayDetailScreen(
-                    dayLabel = manualEditingDay,
-                    exercises = manualRoutineDraft.days[manualEditingDay].orEmpty(),
-                    onBack = { navController.popBackStack() }
-                )
-            }
-
-            composable(Route.ROUTINE_WORKOUT_DETAIL) {
-                WorkoutDetailScreen(
-                    dayLabel = routineDetailDayLabel,
-                    gymName = routineCondition.placeLabel,
-                    onBack = { navController.popBackStack() },
-                    onChangePlace = { navController.navigate(Route.ROUTINE_PLACE_CHANGE) },
-                    onStartWorkout = { navController.navigate(Route.WORKOUT) }
-                )
+            // 루틴 탭 위에 열리는 요일 상세. 루틴 탭의 RoutineViewModel을 같이 쓴다
+            composable(Route.ROUTINE_WORKOUT_DETAIL) { entry ->
+                val routineEntry = remember(entry) { navController.getBackStackEntry(Route.ROUTINE) }
+                val viewModel: RoutineViewModel = hiltViewModel(routineEntry)
+                val state by viewModel.uiState.collectAsStateWithLifecycle()
+                state.dayDetails[routineDetailDayLabel]?.let { detail ->
+                    WorkoutDetailScreen(
+                        detail = detail,
+                        isToday = routineDetailDayLabel == state.todayLabel,
+                        placeLabel = state.placeLabel,
+                        onBack = { navController.popBackStack() },
+                        // 오늘 운동 장소 변경은 오늘의 운동 장소 변경 화면에서 한다
+                        onChangePlace = { navController.navigate(Route.WORKOUT_LOCATION) },
+                        onStartWorkout = { navController.navigate(Route.WORKOUT) }
+                    )
+                }
             }
 
             composable("workout_time_change") {
@@ -853,6 +726,229 @@ fun FitMateNavHost() {
 
             signupGraph(navController)
         }
+    }
+}
+
+// 루틴 만들기 화면 (방식 선택 ~ 저장). 그래프 범위의 RoutineCreateViewModel 하나에 조건 / 추천 결과 / 초안을 모은다
+private fun NavGraphBuilder.routineCreateGraph(navController: NavHostController) {
+    navigation(startDestination = Route.ROUTINE_CREATE_METHOD, route = Route.ROUTINE_CREATE_GRAPH) {
+
+        routineCreateComposable(navController, Route.ROUTINE_CREATE_METHOD) { _, _ ->
+            RoutineCreationMethodScreen(
+                onBack = { navController.popBackStack() },
+                onAiHandsOff = { navController.navigate(Route.ROUTINE_AI_HANDSOFF_SETUP) },
+                onAiTogether = { navController.navigate(Route.ROUTINE_MANUAL_DAY_SELECT) }
+            )
+        }
+
+        routineCreateComposable(navController, Route.ROUTINE_AI_HANDSOFF_SETUP) { viewModel, state ->
+            LaunchedEffect(viewModel) { viewModel.ensureLoaded() }
+            state.condition?.let { condition ->
+                AiHandsOffSetupScreen(
+                    condition = condition,
+                    onBack = { navController.popBackStack() },
+                    onEditSchedule = { navController.navigate(Route.ROUTINE_SCHEDULE_CHANGE) },
+                    onEditPlace = { navController.navigate(Route.ROUTINE_PLACE_CHANGE) },
+                    onGenerate = { navController.navigate(Route.ROUTINE_AI_LOADING) }
+                )
+            }
+        }
+
+        routineCreateComposable(navController, Route.ROUTINE_PLACE_CHANGE) { viewModel, state ->
+            state.condition?.let { condition ->
+                RoutinePlaceChangeScreen(
+                    condition = condition,
+                    savedGyms = state.savedGyms,
+                    onBack = { navController.popBackStack() },
+                    onDone = { updated ->
+                        viewModel.updateCondition(updated)
+                        navController.popBackStack()
+                    }
+                )
+            }
+        }
+
+        routineCreateComposable(navController, Route.ROUTINE_SCHEDULE_CHANGE) { viewModel, state ->
+            state.condition?.let { condition ->
+                RoutineScheduleChangeScreen(
+                    condition = condition,
+                    onBack = { navController.popBackStack() },
+                    onDone = { updated ->
+                        viewModel.updateCondition(updated)
+                        navController.popBackStack()
+                    }
+                )
+            }
+        }
+
+        routineCreateComposable(
+            navController,
+            Route.ROUTINE_AI_LOADING,
+            onRecommendationReady = {
+                navController.navigate(Route.ROUTINE_AI_RESULT) {
+                    popUpTo(Route.ROUTINE_AI_LOADING) { inclusive = true }
+                }
+            },
+            onLoadingFailed = { navController.popBackStack() }
+        ) { viewModel, _ ->
+            LaunchedEffect(viewModel) { viewModel.recommendWeeklyRoutine() }
+            RoutineAiLoadingScreen()
+        }
+
+        routineCreateComposable(navController, Route.ROUTINE_AI_RESULT) { viewModel, state ->
+            state.aiResult?.let { result ->
+                RoutineAiResultScreen(
+                    tags = result.tags,
+                    summary = result.summary,
+                    days = result.days,
+                    onOpenDay = { day ->
+                        viewModel.openPreview(day)
+                        navController.navigate(Route.ROUTINE_AI_DAY_PREVIEW)
+                    },
+                    onUseRoutine = viewModel::saveRecommendedRoutine,
+                    onWhy = { navController.navigate(Route.ROUTINE_AI_REASON) },
+                    onRegenerate = {
+                        navController.navigate(Route.ROUTINE_AI_LOADING) {
+                            popUpTo(Route.ROUTINE_AI_RESULT) { inclusive = true }
+                        }
+                    }
+                )
+            }
+        }
+
+        routineCreateComposable(navController, Route.ROUTINE_AI_DAY_PREVIEW) { _, state ->
+            state.aiResult?.dayDetails?.get(state.previewDay)?.let { detail ->
+                RoutineDayPreviewScreen(
+                    detail = detail,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+        }
+
+        routineCreateComposable(navController, Route.ROUTINE_AI_REASON) { _, state ->
+            state.aiResult?.let { result ->
+                RoutineAiReasonScreen(
+                    referenceInfo = result.referenceInfo,
+                    compositionReasons = result.compositionReasons,
+                    dayReasons = result.dayReasons,
+                    onBack = { navController.popBackStack() },
+                    onConfirm = { navController.popBackStack() }
+                )
+            }
+        }
+
+        routineCreateComposable(navController, Route.ROUTINE_MANUAL_DAY_SELECT) { viewModel, state ->
+            LaunchedEffect(viewModel) { viewModel.ensureLoaded() }
+            ManualDaySelectionScreen(
+                draft = state.draft,
+                onBack = { navController.popBackStack() },
+                onDayClick = { day ->
+                    viewModel.startEditingDay(day)
+                    navController.navigate(Route.ROUTINE_MANUAL_EXERCISE_SELECT)
+                },
+                onOpenDay = { day ->
+                    viewModel.openDay(day)
+                    navController.navigate(Route.ROUTINE_MANUAL_DAY_DETAIL)
+                },
+                onSave = {
+                    if (viewModel.canSaveManualRoutine()) navController.navigate(Route.ROUTINE_MANUAL_SAVING)
+                }
+            )
+        }
+
+        routineCreateComposable(navController, Route.ROUTINE_MANUAL_EXERCISE_SELECT) { viewModel, state ->
+            // 운동 장소를 불러온 뒤에 그 장소에서 할 수 있는 운동을 불러온다
+            LaunchedEffect(state.condition) { viewModel.loadAvailableExercises() }
+            ManualExerciseSelectionScreen(
+                exercises = state.searchableExercises,
+                initialSelected = state.selectedExerciseNames,
+                onBack = { navController.popBackStack() },
+                onAiRecommend = { navController.navigate(Route.ROUTINE_MANUAL_AI_LOADING) },
+                onNext = { exercises ->
+                    viewModel.configureExercises(exercises)
+                    navController.navigate(Route.ROUTINE_EXERCISE_CONFIG)
+                }
+            )
+        }
+
+        // AI 추천이 끝나면 추천 운동이 선택된 검색 화면으로 돌아간다
+        routineCreateComposable(
+            navController,
+            Route.ROUTINE_MANUAL_AI_LOADING,
+            onAiExercisesReady = {
+                navController.navigate(Route.ROUTINE_MANUAL_EXERCISE_SELECT) {
+                    popUpTo(Route.ROUTINE_MANUAL_EXERCISE_SELECT) { inclusive = true }
+                }
+            },
+            onLoadingFailed = { navController.popBackStack() }
+        ) { viewModel, _ ->
+            LaunchedEffect(viewModel) { viewModel.recommendExercises() }
+            RoutineAiLoadingScreen()
+        }
+
+        routineCreateComposable(navController, Route.ROUTINE_EXERCISE_CONFIG) { viewModel, state ->
+            ExerciseConfigurationScreen(
+                settings = state.configSettings,
+                recommendations = state.recommendations,
+                onSettingChange = viewModel::onSettingChange,
+                onBack = { navController.popBackStack() },
+                onDone = {
+                    if (viewModel.finishConfiguration()) {
+                        navController.navigate(Route.ROUTINE_MANUAL_DAY_SELECT) {
+                            popUpTo(Route.ROUTINE_MANUAL_DAY_SELECT) { inclusive = false }
+                            launchSingleTop = true
+                        }
+                    }
+                }
+            )
+        }
+
+        routineCreateComposable(navController, Route.ROUTINE_MANUAL_DAY_DETAIL) { _, state ->
+            ManualDayDetailScreen(
+                dayLabel = state.editingDay,
+                exercises = state.draft.days[state.editingDay].orEmpty(),
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // 요일별 AI 요약 후 저장하는 동안 보여준다
+        routineCreateComposable(
+            navController,
+            Route.ROUTINE_MANUAL_SAVING,
+            onLoadingFailed = { navController.popBackStack() }
+        ) { viewModel, _ ->
+            LaunchedEffect(viewModel) { viewModel.saveManualRoutine() }
+            RoutineAiLoadingScreen()
+        }
+    }
+}
+
+// routine/create 그래프 범위의 RoutineCreateViewModel과 화면 상태를 넘겨주는 목적지
+// 루틴 저장이 끝나면 루틴 만들기 화면을 모두 닫고 나의 루틴으로 돌아간다
+private fun NavGraphBuilder.routineCreateComposable(
+    navController: NavHostController,
+    route: String,
+    onRecommendationReady: () -> Unit = {},
+    onAiExercisesReady: () -> Unit = {},
+    onLoadingFailed: () -> Unit = {},
+    content: @Composable (RoutineCreateViewModel, RoutineCreateUiState) -> Unit
+) {
+    composable(route) { entry ->
+        val graphEntry = remember(entry) { navController.getBackStackEntry(Route.ROUTINE_CREATE_GRAPH) }
+        val viewModel: RoutineCreateViewModel = hiltViewModel(graphEntry)
+        val state by viewModel.uiState.collectAsStateWithLifecycle()
+        RoutineCreateEventEffect(
+            viewModel,
+            onRecommendationReady = onRecommendationReady,
+            onAiExercisesReady = onAiExercisesReady,
+            onSaved = {
+                navController.navigate(Route.ROUTINE) {
+                    popUpTo(Route.ROUTINE) { inclusive = false }
+                }
+            },
+            onLoadingFailed = onLoadingFailed
+        )
+        content(viewModel, state)
     }
 }
 
