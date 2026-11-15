@@ -120,6 +120,35 @@ data class TodayWorkoutResponseDto(
     val exercises: List<TodayExerciseResponseDto> = emptyList()
 )
 
+// GET /api/home. 실제 응답은 Swagger와 다르다 (todayWorkout에 exerciseNames / status가 오고 장소 정보는 없다)
+// 오늘 운동이 없으면 todayWorkout의 dailyRoutineId 등이 null로 온다
+@Serializable
+data class HomeResponseDto(
+    val weeklyWorkout: HomeWeeklyWorkoutDto? = null,
+    val todayWorkout: HomeTodayWorkoutDto? = null
+)
+
+@Serializable
+data class HomeWeeklyWorkoutDto(
+    val hasWeeklyRoutine: Boolean = false,
+    val completedWorkoutCount: Int = 0,
+    val targetWorkoutCount: Int = 0,
+    val consecutiveWorkoutDays: Int = 0
+)
+
+@Serializable
+data class HomeTodayWorkoutDto(
+    val dailyRoutineId: Long? = null,
+    val workoutDate: String? = null,
+    val title: String? = null,
+    val estimatedDurationMinutes: Int? = null,
+    val averageRestSeconds: Int? = null,
+    val exerciseCount: Int = 0,
+    val exerciseNames: List<String> = emptyList(),
+    val status: String? = null,
+    val workoutRecordId: Long? = null
+)
+
 @Serializable
 data class CustomAiExerciseRequestDto(
     val environmentId: Long

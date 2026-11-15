@@ -8,6 +8,9 @@ import com.fitmate.data.remote.dto.CustomAiSummaryRequestDto
 import com.fitmate.data.remote.dto.CustomRoutineSaveRequestDto
 import com.fitmate.data.remote.dto.DailyRoutineRequestDto
 import com.fitmate.data.remote.dto.ExercisePrescriptionDto
+import com.fitmate.data.remote.dto.HomeResponseDto
+import com.fitmate.data.remote.dto.HomeTodayWorkoutDto
+import com.fitmate.data.remote.dto.HomeWeeklyWorkoutDto
 import com.fitmate.data.remote.dto.PrescriptionRecommendationDto
 import com.fitmate.data.remote.dto.RecommendationReasonDto
 import com.fitmate.data.remote.dto.RoutineExerciseResponseDto
@@ -23,6 +26,8 @@ import com.fitmate.domain.model.DailyRoutine
 import com.fitmate.domain.model.DailyRoutineSummary
 import com.fitmate.domain.model.ExerciseLocation
 import com.fitmate.domain.model.ExercisePrescription
+import com.fitmate.domain.model.HomeSummary
+import com.fitmate.domain.model.HomeTodayWorkout
 import com.fitmate.domain.model.PrescriptionRecommendation
 import com.fitmate.domain.model.RecommendationReason
 import com.fitmate.domain.model.RoutineTarget
@@ -50,18 +55,25 @@ class RoutineRepositoryImpl @Inject constructor(
         apiCall { routineApi.getTodayWorkout().toDomain() }
             .nullIfErrorCode(TODAY_ROUTINE_NOT_FOUND, WEEKLY_ROUTINE_NOT_FOUND)
 
+    override suspend fun getHomeSummary(): Result<HomeSummary> =
+        apiCall { routineApi.getHome().toDomain() }
+
     override suspend fun recommendWeeklyRoutine(
         days: Set<WorkoutDay>,
         sessionMinutes: Int,
-        environmentId: Long
+        environmentId: Long,
+        regenerate: Boolean
     ): Result<WeeklyRoutineRecommendation> = apiCall {
-        val response = routineApi.recommendWeeklyRoutine(
-            WeeklyAiRoutineRequestDto(
-                selectedDays = days.sorted().map { it.name },
-                sessionMinutes = sessionMinutes,
-                environmentId = environmentId
-            )
+        val request = WeeklyAiRoutineRequestDto(
+            selectedDays = days.sorted().map { it.name },
+            sessionMinutes = sessionMinutes,
+            environmentId = environmentId
         )
+        val response = if (regenerate) {
+            routineApi.regenerateWeeklyRoutineRecommendation(request)
+        } else {
+            routineApi.recommendWeeklyRoutine(request)
+        }
         val reasons = response.recommendationReason
         WeeklyRoutineRecommendation(
             reasons = listOfNotNull(reasons?.primaryGoalReason, reasons?.secondaryGoalReason, reasons?.scheduleReason)
@@ -73,15 +85,15 @@ class RoutineRepositoryImpl @Inject constructor(
     override suspend fun saveWeeklyRoutine(
         environmentId: Long,
         sessionMinutes: Int,
-        days: List<DailyRoutine>
+        days: List<DailyRoutine>,
+        regenerate: Boolean
     ): Result<Unit> = apiCall {
-        routineApi.saveWeeklyRoutine(
-            WeeklyRoutineSaveRequestDto(
-                environmentId = environmentId,
-                sessionMinutes = sessionMinutes,
-                weeklyPlan = days.map { it.toRequestDto(environmentId = null) }
-            )
+        val request = WeeklyRoutineSaveRequestDto(
+            environmentId = environmentId,
+            sessionMinutes = sessionMinutes,
+            weeklyPlan = days.map { it.toRequestDto(environmentId = null) }
         )
+        if (regenerate) routineApi.regenerateWeeklyRoutine(request) else routineApi.saveWeeklyRoutine(request)
     }
 
     override suspend fun recommendExercises(environmentId: Long): Result<List<String>> = apiCall {
@@ -108,14 +120,14 @@ class RoutineRepositoryImpl @Inject constructor(
     override suspend fun saveCustomRoutine(
         firstSelectedDay: WorkoutDay,
         environmentId: Long,
-        days: List<DailyRoutine>
+        days: List<DailyRoutine>,
+        regenerate: Boolean
     ): Result<Unit> = apiCall {
-        routineApi.saveCustomRoutine(
-            CustomRoutineSaveRequestDto(
-                firstSelectedDay = firstSelectedDay.name,
-                weeklyPlan = days.map { it.toRequestDto(environmentId) }
-            )
+        val request = CustomRoutineSaveRequestDto(
+            firstSelectedDay = firstSelectedDay.name,
+            weeklyPlan = days.map { it.toRequestDto(environmentId) }
         )
+        if (regenerate) routineApi.regenerateCustomRoutine(request) else routineApi.saveCustomRoutine(request)
     }
 }
 
@@ -197,3 +209,30 @@ private fun TodayWorkoutResponseDto.toDomain() = TodayRoutine(
     hasWorkedOut = hasWorkedOut,
     exerciseNames = exercises.map { it.exerciseName }
 )
+
+// 서버 상태값 중 운동을 마친 상태. 아직 COMPLETED 외의 값은 확인하지 못했다
+private const val DAILY_ROUTINE_COMPLETED = "COMPLETED"
+
+private fun HomeResponseDto.toDomain(): HomeSummary {
+    val weekly = weeklyWorkout ?: HomeWeeklyWorkoutDto()
+    return HomeSummary(
+        hasWeeklyRoutine = weekly.hasWeeklyRoutine,
+        completedWorkoutCount = weekly.completedWorkoutCount,
+        targetWorkoutCount = weekly.targetWorkoutCount,
+        consecutiveWorkoutDays = weekly.consecutiveWorkoutDays,
+        today = todayWorkout?.toDomain()
+    )
+}
+
+// 쉬는 날이면 dailyRoutineId가 null로 온다
+private fun HomeTodayWorkoutDto.toDomain(): HomeTodayWorkout? {
+    return HomeTodayWorkout(
+        dailyRoutineId = dailyRoutineId ?: return null,
+        date = workoutDate?.let(LocalDate::parse) ?: LocalDate.now(),
+        title = title.orEmpty(),
+        estimatedMinutes = estimatedDurationMinutes ?: 0,
+        averageRestSeconds = averageRestSeconds ?: 0,
+        exerciseNames = exerciseNames,
+        completed = status == DAILY_ROUTINE_COMPLETED
+    )
+}

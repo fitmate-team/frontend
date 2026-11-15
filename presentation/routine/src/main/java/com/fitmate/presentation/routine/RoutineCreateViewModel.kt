@@ -84,6 +84,9 @@ class RoutineCreateViewModel @Inject constructor(
     private var environments: List<WorkoutEnvironment> = emptyList()
     private var catalog: Map<String, Exercise> = emptyMap()
 
+    // 이번 주 루틴이 이미 있으면 새로 저장(POST) 대신 재생성 API로 덮어쓴다. 서버는 주간 루틴을 주에 하나만 받는다
+    private var hasSavedRoutine = false
+
     // 운동 환경에서 할 수 있는 운동. 검색 목록은 이름으로 고르기 때문에 이름으로 찾는다
     private var availableExercises: Map<String, Exercise> = emptyMap()
     private var availableEnvironmentId: Long? = null
@@ -108,9 +111,11 @@ class RoutineCreateViewModel @Inject constructor(
             val memberResult = async { memberRepository.getMyInfo() }
             val environmentResult = async { memberRepository.getWorkoutEnvironments() }
             val catalogResult = async { catalogRepository.getExercises() }
+            val savedRoutineResult = async { routineRepository.getWeeklyRoutine() }
 
             val loadedMember = memberResult.await().getOrElse { return@launch sendMessage(it) }
             val loadedEnvironments = environmentResult.await().getOrElse { return@launch sendMessage(it) }
+            hasSavedRoutine = savedRoutineResult.await().getOrElse { return@launch sendMessage(it) } != null
             catalog = catalogResult.await().getOrNull().orEmpty().associateBy { it.code }
             member = loadedMember
             environments = loadedEnvironments.environments
@@ -147,7 +152,7 @@ class RoutineCreateViewModel @Inject constructor(
         if (days.isEmpty() || minutes == null) return loadingFailed("운동 요일과 시간을 선택해주세요.")
 
         requestJob = viewModelScope.launch {
-            routineRepository.recommendWeeklyRoutine(days, minutes, environmentId)
+            routineRepository.recommendWeeklyRoutine(days, minutes, environmentId, regenerate = hasSavedRoutine)
                 .onSuccess { result ->
                     recommendation = result
                     recommendedEnvironmentId = environmentId
@@ -169,8 +174,8 @@ class RoutineCreateViewModel @Inject constructor(
         val environmentId = recommendedEnvironmentId ?: return
         val minutes = recommendedMinutes ?: return
         requestJob = viewModelScope.launch {
-            routineRepository.saveWeeklyRoutine(environmentId, minutes, routine.days)
-                .onSuccess { _events.send(RoutineCreateEvent.Saved) }
+            routineRepository.saveWeeklyRoutine(environmentId, minutes, routine.days, regenerate = hasSavedRoutine)
+                .onSuccess { savedRoutine() }
                 .onFailure { sendMessage(it) }
         }
     }
@@ -291,8 +296,8 @@ class RoutineCreateViewModel @Inject constructor(
                 }
             }.getOrElse { return@launch loadingFailed(it.message ?: "루틴을 저장하지 못했어요.") }
 
-            routineRepository.saveCustomRoutine(firstDay, environmentId, days.sortedBy { it.day })
-                .onSuccess { _events.send(RoutineCreateEvent.Saved) }
+            routineRepository.saveCustomRoutine(firstDay, environmentId, days.sortedBy { it.day }, regenerate = hasSavedRoutine)
+                .onSuccess { savedRoutine() }
                 .onFailure { loadingFailed(it.message ?: "루틴을 저장하지 못했어요.") }
         }
     }
@@ -358,6 +363,11 @@ class RoutineCreateViewModel @Inject constructor(
             },
             dayDetails = days.associate { it.day.label() to it.toDetailUi(recordTypes) }
         )
+    }
+
+    private suspend fun savedRoutine() {
+        hasSavedRoutine = true
+        _events.send(RoutineCreateEvent.Saved)
     }
 
     private suspend fun sendMessage(error: Throwable) {
