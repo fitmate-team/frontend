@@ -62,6 +62,25 @@ data class DailyRoutineSummary(
     val estimatedMinutes: Int
 )
 
+// 홈 화면 요약 (GET /api/home). 이번 주 루틴이 없으면 hasWeeklyRoutine = false, 오늘 운동이 없으면 today = null
+data class HomeSummary(
+    val hasWeeklyRoutine: Boolean,
+    val completedWorkoutCount: Int,
+    val targetWorkoutCount: Int,
+    val consecutiveWorkoutDays: Int,
+    val today: HomeTodayWorkout?
+)
+
+data class HomeTodayWorkout(
+    val dailyRoutineId: Long,
+    val date: LocalDate,
+    val title: String,
+    val estimatedMinutes: Int,
+    val averageRestSeconds: Int,
+    val exerciseNames: List<String>,
+    val completed: Boolean
+)
+
 // 오늘의 운동 (홈 카드)
 data class TodayRoutine(
     val dailyRoutineId: Long,

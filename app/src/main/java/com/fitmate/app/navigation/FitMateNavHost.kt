@@ -128,7 +128,6 @@ fun FitMateNavHost() {
     // 루틴 탭에서 연 요일 상세 (요일 문구)
     var routineDetailDayLabel by remember { mutableStateOf("월") }
     var mypageEquipmentEditTitle by remember { mutableStateOf("홈트 기구 편집") }
-    var routineCondition by remember { mutableStateOf(SampleRoutineCondition) }
 
     var selectedWorkoutTitle by remember {
         mutableStateOf("")
@@ -136,6 +135,8 @@ fun FitMateNavHost() {
 
     var selectedWorkoutMinutes by remember {
         mutableIntStateOf(20)
+    }
+
     // 마이페이지
     var avoidedExercises by remember {
         mutableStateOf(listOf<String>())
@@ -176,7 +177,7 @@ fun FitMateNavHost() {
 
         NavHost(
             navController = navController,
-            startDestination = Route.MYPAGE,
+            startDestination = Route.LOGIN,
             modifier = Modifier.padding(innerPadding),
 
             // 화면 전환 애니메이션 제거
