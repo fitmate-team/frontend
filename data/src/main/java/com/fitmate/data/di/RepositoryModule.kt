@@ -4,6 +4,8 @@ import com.fitmate.data.repository.AuthRepositoryImpl
 import com.fitmate.data.repository.CatalogRepositoryImpl
 import com.fitmate.domain.repository.AuthRepository
 import com.fitmate.domain.repository.CatalogRepository
+import com.fitmate.data.repository.WorkoutRepositoryImpl
+import com.fitmate.domain.repository.WorkoutRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -21,4 +23,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindCatalogRepository(impl: CatalogRepositoryImpl): CatalogRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindWorkoutRepository(
+        impl: WorkoutRepositoryImpl
+    ): WorkoutRepository
 }

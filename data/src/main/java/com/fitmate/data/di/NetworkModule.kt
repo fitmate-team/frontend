@@ -7,6 +7,7 @@ import com.fitmate.data.remote.TokenAuthenticator
 import com.fitmate.data.remote.api.AuthApi
 import com.fitmate.data.remote.api.CatalogApi
 import com.fitmate.data.remote.api.TokenApi
+import com.fitmate.data.remote.api.WorkoutApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -74,4 +75,9 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideCatalogApi(retrofit: Retrofit): CatalogApi = retrofit.create(CatalogApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideWorkoutApi(retrofit: Retrofit): WorkoutApi =
+        retrofit.create(WorkoutApi::class.java)
 }
