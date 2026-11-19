@@ -1,4 +1,4 @@
-package com.fitmate.presentation.workout
+package com.fitmate.presentation.workout.result
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -465,14 +465,12 @@ fun NextWorkoutAdjustmentScreen(
         // 7. 하단 고정 버튼
         // ─────────────────────────────
         Button(
+
             onClick = {
                 // '적용'을 선택한 운동만 전달
                 onApplySelected(
                     items.filter { selectedIds[it.id] == true }
                 )
-
-                // 홈 화면으로 이동
-                onGoHome()
             },
             modifier = Modifier
                 .fillMaxWidth()

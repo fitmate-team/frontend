@@ -1,4 +1,4 @@
-package com.fitmate.presentation.workout
+package com.fitmate.presentation.workout.session
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background

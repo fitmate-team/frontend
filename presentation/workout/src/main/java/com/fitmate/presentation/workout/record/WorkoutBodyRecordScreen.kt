@@ -1,4 +1,4 @@
-package com.fitmate.presentation.workout
+package com.fitmate.presentation.workout.record
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -179,7 +180,7 @@ private fun BodyRecordField(
             trailingIcon = { Text(unit, color = Gray300, fontSize = 16.sp,
                 modifier = Modifier.padding(end = 16.dp)) },
             singleLine = true,
-            textStyle = androidx.compose.ui.text.TextStyle(
+            textStyle = TextStyle(
                 fontFamily = FitMateFontFamily, fontWeight = FontWeight.Bold,
                 fontSize = 14.sp, color = Gray700
             ),

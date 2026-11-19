@@ -1,5 +1,4 @@
-
-package com.fitmate.presentation.workout
+package com.fitmate.presentation.workout.today
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -18,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.fitmate.domain.model.TodayWorkout
 
 import com.fitmate.presentation.designsystem.R
 import com.fitmate.presentation.designsystem.component.ExerciseListItem
@@ -26,24 +26,58 @@ import com.fitmate.presentation.designsystem.theme.*
 data class TodayExercise(
     val name: String,
     val detail: String,
-    val rest: String = "휴식 90초",
+    val rest: String,
     val needsWeight: Boolean = false
 )
 
 data class WorkoutTodayUiState(
-    val category: String = "상체",
-    val date: String = "9월 3일 (수)",
-    val durationMinutes: Int = 55,
-    val averageRestSeconds: Int = 60,
-    val gymName: String = "Fit Gym",
-    val exercises: List<TodayExercise> = listOf(
-        TodayExercise("벤치프레스", "8회 × 4세트", needsWeight = true),
-        TodayExercise("숄더프레스", "40kg / 8회 × 4세트"),
-        TodayExercise("체스트프레스", "8회 × 4세트", needsWeight = true),
-        TodayExercise("레터럴레이즈", "20kg / 8회 × 4세트"),
-        TodayExercise("레터럴레이즈", "15분", rest = "")
-    )
+    val category: String = "",
+    val date: String = "",
+    val durationMinutes: Int = 0,
+    val averageRestSeconds: Int = 0,
+    val gymName: String = "",
+    val exercises: List<TodayExercise> = emptyList()
 )
+
+
+
+fun TodayWorkout.toUiState(): WorkoutTodayUiState {
+    return WorkoutTodayUiState(
+        category = title,
+        date = workoutDate,
+        durationMinutes = estimatedDurationMinutes,
+        averageRestSeconds = averageRestSeconds,
+        gymName = locationName,
+        exercises = exercises.map { exercise ->
+
+            val detail = when {
+                exercise.durationSeconds != null ->
+                    "${exercise.durationSeconds}초"
+
+                exercise.weightKg != null &&
+                        exercise.reps != null &&
+                        exercise.sets != null ->
+                    "${exercise.weightKg}kg / ${exercise.reps}회 × ${exercise.sets}세트"
+
+                exercise.reps != null &&
+                        exercise.sets != null ->
+                    "${exercise.reps}회 × ${exercise.sets}세트"
+
+                else -> "운동 정보 없음"
+            }
+
+            TodayExercise(
+                name = exercise.exerciseName ?: "운동 이름 없음",
+                detail = detail,
+                rest = exercise.restSeconds?.let {
+                    "휴식 ${it}초"
+                } ?: "",
+                needsWeight = exercise.weightRequired && exercise.weightKg == null
+            )
+        }
+    )
+}
+
 
 @Composable
 fun TodayWorkoutScreen(

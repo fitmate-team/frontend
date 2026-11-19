@@ -1,4 +1,5 @@
-package com.fitmate.presentation.workout
+
+package com.fitmate.presentation.workout.setup
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -7,7 +8,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,12 +15,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import com.fitmate.presentation.designsystem.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.fitmate.presentation.designsystem.R
 import com.fitmate.presentation.designsystem.theme.*
+import com.fitmate.presentation.workout.components.WorkoutGuideContent
 
 data class WorkoutWeightExercise(
     val id: Int,
@@ -34,45 +35,42 @@ data class WorkoutWeightExercise(
 @Composable
 fun WorkoutWeightSettingScreen(
     modifier: Modifier = Modifier,
-    initialExerciseId: Int = 1,
-    exercises: List<WorkoutWeightExercise> = listOf(
-        WorkoutWeightExercise(
-            id = 1,
-            name = "벤치프레스",
-            description = "처음 사용하는 중량을 설정해볼게요.\n가벼운 무게부터 직접 수행해보고 적절한 중량을 입력해주세요.",
-            guide = "허리를 곧게 펴고 손잡이를 잡아주세요.\n가슴을 편 상태에서 팔꿈치를 뒤로 당겨주세요.\n어깨가 들리지 않도록 천천히 돌아오세요.",
-            bodyParts = listOf("가슴", "삼두", "어깨")
-        ),
-        WorkoutWeightExercise(
-            id = 2,
-            name = "체스트프레스",
-            description = "처음 사용하는 중량을 설정해볼게요.\n가벼운 무게부터 직접 수행해보고 적절한 중량을 입력해주세요.",
-            guide = "등을 등받이에 밀착하고 손잡이를 잡아주세요.\n가슴에 힘을 주며 손잡이를 앞으로 밀어주세요.\n팔꿈치를 과하게 펴지 않고 천천히 돌아오세요.",
-            bodyParts = listOf("가슴", "삼두", "어깨")
-        )
-    ),
+    initialExerciseId: Int,
+    exercises: List<WorkoutWeightExercise>,
+    isGuideLoading: Boolean = false,
     onBack: () -> Unit = {},
     onComplete: (Map<Int, Int>) -> Unit = {}
 ) {
-    var currentIndex by remember(exercises, initialExerciseId) {
-        mutableIntStateOf(
-            exercises.indexOfFirst { it.id == initialExerciseId }
-                .coerceAtLeast(0)
-        )
+    // API 응답으로 exercises가 바뀌어도 현재 운동 위치 유지
+    var currentExerciseId by remember(initialExerciseId) {
+        mutableIntStateOf(initialExerciseId)
     }
 
-    val weights = remember(exercises) {
+    // 가이드가 갱신되어도 입력한 중량 유지
+    val weights = remember {
         mutableStateMapOf<Int, Int>()
     }
 
     if (exercises.isEmpty()) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .background(White),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator(
+                color = Blue600
+            )
+        }
         return
     }
 
+    val currentIndex = exercises
+        .indexOfFirst { it.id == currentExerciseId }
+        .coerceAtLeast(0)
+
     val exercise = exercises[currentIndex]
-
     val currentWeight = weights[exercise.id] ?: 0
-
     val isLastExercise = currentIndex == exercises.lastIndex
 
     Column(
@@ -80,7 +78,6 @@ fun WorkoutWeightSettingScreen(
             .fillMaxSize()
             .background(White)
     ) {
-
         // 상단 헤더
         Row(
             modifier = Modifier
@@ -89,7 +86,6 @@ fun WorkoutWeightSettingScreen(
                 .padding(horizontal = 24.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-
             Icon(
                 painter = painterResource(R.drawable.ic_workout_back),
                 contentDescription = "뒤로가기",
@@ -97,7 +93,7 @@ fun WorkoutWeightSettingScreen(
                     .size(24.dp)
                     .clickable {
                         if (currentIndex > 0) {
-                            currentIndex--
+                            currentExerciseId = exercises[currentIndex - 1].id
                         } else {
                             onBack()
                         }
@@ -129,7 +125,6 @@ fun WorkoutWeightSettingScreen(
                 .padding(horizontal = 24.dp)
                 .padding(top = 24.dp, bottom = 20.dp)
         ) {
-
             // 운동 이름
             Text(
                 text = exercise.name,
@@ -152,7 +147,8 @@ fun WorkoutWeightSettingScreen(
             WorkoutGuideContent(
                 guide = exercise.guide,
                 bodyParts = exercise.bodyParts,
-                videoUrl = exercise.videoUrl
+                videoUrl = exercise.videoUrl,
+                isLoading = isGuideLoading
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -174,7 +170,6 @@ fun WorkoutWeightSettingScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-
                 // - 버튼
                 Box(
                     modifier = Modifier
@@ -190,7 +185,6 @@ fun WorkoutWeightSettingScreen(
                         },
                     contentAlignment = Alignment.Center
                 ) {
-
                     Text(
                         text = "−",
                         fontSize = 24.sp,
@@ -214,7 +208,6 @@ fun WorkoutWeightSettingScreen(
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-
                     Text(
                         text = if (currentWeight == 0) {
                             "-"
@@ -242,7 +235,6 @@ fun WorkoutWeightSettingScreen(
                         },
                     contentAlignment = Alignment.Center
                 ) {
-
                     Text(
                         text = "+",
                         fontSize = 24.sp,
@@ -262,21 +254,19 @@ fun WorkoutWeightSettingScreen(
                 )
                 .height(50.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(Blue600)
-                .clickable {
-
+                .background(
+                    if (currentWeight > 0) Blue600
+                    else Blue600.copy(alpha = 0.5f)
+                )
+                .clickable(enabled = currentWeight > 0) {
                     if (isLastExercise) {
-
                         onComplete(weights.toMap())
-
                     } else {
-
-                        currentIndex++
+                        currentExerciseId = exercises[currentIndex + 1].id
                     }
                 },
             contentAlignment = Alignment.Center
         ) {
-
             Text(
                 text = if (isLastExercise) {
                     "시작하기"

@@ -1,4 +1,4 @@
-package com.fitmate.presentation.workout
+package com.fitmate.presentation.workout.session
 
 import android.os.SystemClock
 import androidx.compose.foundation.BorderStroke
@@ -26,6 +26,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -37,6 +38,13 @@ import com.fitmate.presentation.designsystem.theme.Gray700
 import com.fitmate.presentation.designsystem.theme.Gray300
 import com.fitmate.presentation.designsystem.theme.Gray200
 import com.fitmate.presentation.designsystem.theme.Gray50
+import com.fitmate.presentation.workout.result.NextWorkoutAdjustmentItem
+import com.fitmate.presentation.workout.result.NextWorkoutAdjustmentScreen
+import com.fitmate.presentation.workout.result.WorkoutAnalysisItem
+import com.fitmate.presentation.workout.result.WorkoutAnalysisScreen
+import com.fitmate.presentation.workout.record.WorkoutBodyRecordScreen
+import com.fitmate.presentation.workout.components.WorkoutGuideContent
+import com.fitmate.domain.model.WorkoutAdjustmentRecommendation
 import kotlinx.coroutines.delay
 
 private val ProgressBlue = Blue600
@@ -52,7 +60,6 @@ enum class ExerciseBaselineType {
     DURATION
 }
 
-/** 기존 호출부와 호환되도록 baselineType을 마지막에 추가. */
 data class WorkoutProgressExercise(
     val id: Int,
     val name: String,
@@ -61,11 +68,25 @@ data class WorkoutProgressExercise(
     val sets: Int = 4,
     val restSeconds: Int = 30,
     val durationSeconds: Int? = null,
-    val guide: String = "허리를 곧게 펴고 올바른 자세를 유지해주세요.\n무리하지 않고 천천히 움직여주세요.",
+    val guide: String = "",
     val bodyParts: List<String> = emptyList(),
     val videoUrl: String = "",
-    val baselineType: ExerciseBaselineType = ExerciseBaselineType.WEIGHT_REPS_SETS
+    val baselineType: ExerciseBaselineType =
+        ExerciseBaselineType.WEIGHT_REPS_SETS,
+    val exerciseCode: String = "",
+    val exerciseId: Long? = null
 )
+
+
+data class WorkoutSessionResult(
+    val totalSeconds: Long,
+    val exerciseSeconds: Long,
+    val restSeconds: Long,
+    val completedSets: Map<Int, Int>,
+    val exerciseElapsed: Map<Int, Long>,
+    val difficulty: WorkoutDifficulty
+)
+
 
 private enum class WorkoutPhase { ACTIVE, REST, FINISHED }
 private enum class WorkoutDialog { NEXT, QUIT, FINISH }
@@ -73,22 +94,21 @@ private enum class WorkoutDialog { NEXT, QUIT, FINISH }
 @Composable
 fun WorkoutProgressScreen(
     exercises: List<WorkoutProgressExercise> = listOf(
-        WorkoutProgressExercise(1, "벤치프레스", 40, 8, 4, 30, bodyParts = listOf("가슴", "삼두", "어깨")),
-        WorkoutProgressExercise(2, "인클라인 덤벨프레스", 20, 8, 4, 30, bodyParts = listOf("가슴", "어깨")),
-        WorkoutProgressExercise(3, "체스트프레스", 40, 8, 4, 30, bodyParts = listOf("가슴", "삼두")),
-        WorkoutProgressExercise(4, "줄넘기", durationSeconds = 15 * 60, bodyParts = listOf("전신")),
-        WorkoutProgressExercise(
-            id = 5,
-            name = "푸시업",
-            reps = 8,
-            sets = 4,
-            restSeconds = 30,
-            baselineType = ExerciseBaselineType.REPS_SETS
-        )
+        // 기존 운동 목록 그대로 유지
     ),
     onBack: () -> Unit = {},
-    onFinish: (totalSeconds: Long) -> Unit = {},
+    onFinish: (WorkoutSessionResult) -> Unit = {},
+    isWorkoutSaved: Boolean = false,
     onApplyAdjustments: (List<NextWorkoutAdjustmentItem>) -> Unit = {},
+
+    // 새로 추가
+    recommendation: WorkoutAdjustmentRecommendation? = null,
+    isRecommendationLoading: Boolean = false,
+    recommendationErrorMessage: String? = null,
+    onLoadRecommendation: () -> Unit = {},
+    isFinishing: Boolean = false,
+    finishErrorMessage: String? = null,
+
     modifier: Modifier = Modifier
 ) {
     if (exercises.isEmpty()) return
@@ -106,6 +126,9 @@ fun WorkoutProgressScreen(
     var showDifficulty by remember { mutableStateOf(false) }
     var showAnalysis by remember { mutableStateOf(false) }
     var showAdjustment by remember { mutableStateOf(false) }
+    var pendingFinishResult by remember {
+        mutableStateOf<WorkoutSessionResult?>(null)
+    }
     var selectedDifficulty by remember { mutableStateOf<WorkoutDifficulty?>(null) }
     val exerciseElapsed = remember { mutableStateMapOf<Int, Long>() }
     var accumulatedRestSeconds by remember { mutableLongStateOf(0L) }
@@ -159,27 +182,148 @@ fun WorkoutProgressScreen(
     }
 
     if (showAdjustment) {
-        val adjustmentItems = remember(exercises) {
-            exercises.filter { it.durationSeconds == null }.map { item ->
-                val description = "${item.weightKg}kg × ${item.reps}회 × ${item.sets}세트"
+
+        // AI 추천 화면 진입 시 실제 서버 데이터 조회
+        LaunchedEffect(isWorkoutSaved) {
+            if (
+                isWorkoutSaved &&
+                recommendation == null &&
+                !isRecommendationLoading &&
+                recommendationErrorMessage == null
+            ) {
+                onLoadRecommendation()
+            }
+        }
+
+
+        val adjustmentItems = remember(recommendation) {
+            recommendation?.exercises?.mapIndexed { index, item ->
+
+                fun formatValues(
+                    weightKg: Int?,
+                    reps: Int?,
+                    sets: Int?,
+                    durationSeconds: Int?
+                ): String {
+                    return if (durationSeconds != null) {
+                        "${durationSeconds / 60}분 ${durationSeconds % 60}초"
+                    } else {
+                        listOfNotNull(
+                            weightKg?.let { "${it}kg" },
+                            reps?.let { "${it}회" },
+                            sets?.let { "${it}세트" }
+                        ).joinToString(" × ")
+                    }
+                }
+
                 NextWorkoutAdjustmentItem(
-                    id = item.id,
-                    name = item.name,
-                    current = description,
-                    suggested = description,
-                    category = "유지",
-                    reason = "이번 운동 기록을 바탕으로 현재 강도를 유지하도록 제안해요."
+                    id = index + 1,
+                    name = item.exerciseName,
+                    current = formatValues(
+                        item.current.weightKg,
+                        item.current.reps,
+                        item.current.setCount,
+                        item.current.durationSeconds
+                    ),
+                    suggested = formatValues(
+                        item.recommended.weightKg,
+                        item.recommended.reps,
+                        item.recommended.setCount,
+                        item.recommended.durationSeconds
+                    ),
+                    category = when {
+                        item.changes.any {
+                            it.direction.equals("INCREASE", ignoreCase = true)
+                        } -> "증가"
+
+                        item.changes.any {
+                            it.direction.equals("DECREASE", ignoreCase = true)
+                        } -> "감소"
+
+                        else -> "유지"
+                    },
+                    reason = item.reason
+                )
+            }.orEmpty()
+        }
+
+        when {
+            !isWorkoutSaved && finishErrorMessage != null -> {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = finishErrorMessage,
+                        fontFamily = FitMateFontFamily
+                    )
+
+                    Spacer(Modifier.height(16.dp))
+
+                    Button(
+                        onClick = {
+                            pendingFinishResult?.let(onFinish)
+                        },
+                        enabled = !isFinishing && pendingFinishResult != null
+                    ) {
+                        Text("운동 기록 저장 다시 시도")
+                    }
+                }
+            }
+
+            !isWorkoutSaved -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+            isRecommendationLoading || recommendation == null &&
+                    recommendationErrorMessage == null -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+
+            recommendationErrorMessage != null -> {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = recommendationErrorMessage,
+                        fontFamily = FitMateFontFamily
+                    )
+
+                    Spacer(Modifier.height(16.dp))
+
+                    Button(onClick = onLoadRecommendation) {
+                        Text("다시 시도")
+                    }
+                }
+            }
+
+            else -> {
+                NextWorkoutAdjustmentScreen(
+                    items = adjustmentItems,
+                    onBack = {
+                        showAdjustment = false
+                        showAnalysis = true
+                    },
+                    onApplySelected = onApplyAdjustments
                 )
             }
         }
-        NextWorkoutAdjustmentScreen(
-            items = adjustmentItems,
-            onBack = { showAdjustment = false; showAnalysis = true },
-            onApplySelected = onApplyAdjustments,
-            onGoHome = { onFinish(totalSeconds) }
-        )
+
         return
     }
+
 
     if (showAnalysis) {
         WorkoutAnalysisScreen(
@@ -206,7 +350,37 @@ fun WorkoutProgressScreen(
             totalSeconds = totalSeconds,
             restSeconds = accumulatedRestSeconds,
             onBack = { showAnalysis = false; showDifficulty = true },
-            onNext = { showAnalysis = false; showAdjustment = true }
+
+
+            onNext = {
+                val difficulty = selectedDifficulty
+
+                if (difficulty != null) {
+                    if (isWorkoutSaved) {
+                        showAnalysis = false
+                        showAdjustment = true
+                    } else if (!isFinishing) {
+                        val result = WorkoutSessionResult(
+                            totalSeconds = totalSeconds,
+                            exerciseSeconds = (
+                                    totalSeconds - accumulatedRestSeconds
+                                    ).coerceAtLeast(0L),
+                            restSeconds = accumulatedRestSeconds,
+                            completedSets = completedSets.toMap(),
+                            exerciseElapsed = exerciseElapsed.toMap(),
+                            difficulty = difficulty
+                        )
+
+                        pendingFinishResult = result
+                        onFinish(result)
+
+                        showAnalysis = false
+                        showAdjustment = true
+                    }
+                }
+            }
+
+
         )
         return
     }
@@ -527,7 +701,7 @@ fun WorkoutProgressScreen(
                                         fontFamily = FitMateFontFamily,
                                         fontSize = 12.sp,
                                         color = if (current) ProgressBlue else ProgressMuted,
-                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                        textAlign = TextAlign.Center,
                                         maxLines = 1
                                     )
                                 }

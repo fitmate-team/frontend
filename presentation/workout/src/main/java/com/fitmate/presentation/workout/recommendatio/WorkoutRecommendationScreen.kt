@@ -1,6 +1,5 @@
-package com.fitmate.presentation.workout
+package com.fitmate.presentation.workout.recommendatio
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,6 +19,7 @@ import androidx.compose.ui.unit.dp
 
 import com.fitmate.presentation.designsystem.R
 import com.fitmate.presentation.designsystem.theme.*
+import com.fitmate.presentation.workout.today.PrimaryWorkoutButton
 
 data class WorkoutChange(
     val previousExercise: String,

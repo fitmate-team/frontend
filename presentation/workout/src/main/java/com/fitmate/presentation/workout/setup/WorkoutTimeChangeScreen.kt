@@ -1,5 +1,4 @@
-
-package com.fitmate.presentation.workout
+package com.fitmate.presentation.workout.setup
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -22,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.fitmate.presentation.designsystem.R
 import com.fitmate.presentation.designsystem.theme.*
+import com.fitmate.presentation.workout.today.PrimaryWorkoutButton
 
 private data class WorkoutTimeOption(
     val minutes: Int,

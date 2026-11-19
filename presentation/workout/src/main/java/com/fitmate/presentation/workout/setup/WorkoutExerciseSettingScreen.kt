@@ -1,4 +1,4 @@
-package com.fitmate.presentation.workout
+package com.fitmate.presentation.workout.setup
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -13,15 +13,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.fitmate.presentation.designsystem.theme.*
+import com.fitmate.presentation.workout.today.PrimaryWorkoutButton
 
 data class ExerciseSetting(
     val exercise: SelectableExercise,
@@ -40,6 +39,7 @@ fun WorkoutExerciseSettingScreen(
         SelectableExercise(2, "인클라인 덤벨프레스", "가슴", "프리웨이트"),
         SelectableExercise(3, "체스트프레스", "가슴", "머신/케이블")
     ),
+    isSaving: Boolean = false,
     onBack: () -> Unit = {},
     onComplete: (List<ExerciseSetting>) -> Unit = {}
 ) {
@@ -345,11 +345,14 @@ fun WorkoutExerciseSettingScreen(
         ) {
             PrimaryWorkoutButton(
                 label = when {
+                    isSaving -> "저장 중..."
                     !current.isSaved -> "저장하기"
                     selectedIndex == settings.lastIndex -> "완료"
                     else -> "다음"
                 },
                 onClick = {
+                    if (isSaving) return@PrimaryWorkoutButton
+
                     if (!current.isSaved) {
                         updateCurrent {
                             it.copy(isSaved = true)
