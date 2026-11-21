@@ -69,18 +69,37 @@ import com.fitmate.presentation.designsystem.theme.fitMateTextStyle
 
 private data class ReferenceInfo(val label: String, val value: String, val icon: @Composable () -> ImageVector)
 
-private data class CompositionReason(val title: String, val detail: String)
+data class CompositionReason(val title: String, val detail: String)
 
-private data class DayReason(val dayLabel: String, val title: String, val focus: String, val detail: String)
+data class DayReason(val dayLabel: String, val title: String, val focus: String, val detail: String)
 
-// 서버 연동 전까지 사용하는 예시 데이터
-private val SampleReferenceInfos = listOf(
-    ReferenceInfo("운동 목표", "체지방 감량 · 균형형") { Icons.AutoMirrored.Rounded.TrendingUp },
-    ReferenceInfo("운동 경험", "초급") { ImageVector.vectorResource(R.drawable.ic_weightlifting) },
-    ReferenceInfo("운동 가능 횟수", "주 4회") { Icons.Rounded.CalendarMonth },
-    ReferenceInfo("운동 가능 시간", "회당 약 60분") { Icons.Rounded.WatchLater },
-    ReferenceInfo("운동 환경", "헬스장") { Icons.Rounded.Home },
-    ReferenceInfo("신체 정보", "175cm / 72kg") { Icons.Rounded.FitnessCenter }
+// AI가 참고한 정보 (값 문구)
+data class RoutineReferenceInfo(
+    val goal: String,
+    val experience: String,
+    val frequency: String,
+    val duration: String,
+    val environment: String,
+    val body: String
+)
+
+private fun RoutineReferenceInfo.toCards() = listOf(
+    ReferenceInfo("운동 목표", goal) { Icons.AutoMirrored.Rounded.TrendingUp },
+    ReferenceInfo("운동 경험", experience) { ImageVector.vectorResource(R.drawable.ic_weightlifting) },
+    ReferenceInfo("운동 가능 횟수", frequency) { Icons.Rounded.CalendarMonth },
+    ReferenceInfo("운동 가능 시간", duration) { Icons.Rounded.WatchLater },
+    ReferenceInfo("운동 환경", environment) { Icons.Rounded.Home },
+    ReferenceInfo("신체 정보", body) { Icons.Rounded.FitnessCenter }
+)
+
+// 미리보기용 예시 데이터
+private val SampleReferenceInfo = RoutineReferenceInfo(
+    goal = "체지방 감량 · 균형형",
+    experience = "초급",
+    frequency = "주 4회",
+    duration = "회당 약 60분",
+    environment = "헬스장",
+    body = "175cm / 72kg"
 )
 
 private val SampleCompositionReasons = listOf(
@@ -112,10 +131,13 @@ private val DividerWidth = 1.3.dp
 // 3.6 이번 주 추천 루틴 - 추천 이유
 @Composable
 fun RoutineAiReasonScreen(
+    referenceInfo: RoutineReferenceInfo = SampleReferenceInfo,
+    compositionReasons: List<CompositionReason> = SampleCompositionReasons,
+    dayReasons: List<DayReason> = SampleDayReasons,
     onBack: () -> Unit = {},
     onConfirm: () -> Unit = {}
 ) {
-    var expandedDay by rememberSaveable { mutableStateOf<String?>(SampleDayReasons.first().dayLabel) }
+    var expandedDay by rememberSaveable { mutableStateOf(dayReasons.firstOrNull()?.dayLabel) }
 
     FitMateFormScaffold(
         topBar = { FitMateTitleTopBar(title = "추천 이유", onBack = onBack) },
@@ -129,7 +151,7 @@ fun RoutineAiReasonScreen(
         SectionTitle(text = "AI가 참고한 정보")
         Spacer(modifier = Modifier.height(Spacing3))
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            SampleReferenceInfos.chunked(2).forEach { row ->
+            referenceInfo.toCards().chunked(2).forEach { row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     row.forEach { info ->
                         ReferenceInfoCard(info = info, modifier = Modifier.weight(1f))
@@ -145,7 +167,7 @@ fun RoutineAiReasonScreen(
             modifier = Modifier.padding(end = 6.dp),
             verticalArrangement = Arrangement.spacedBy(Spacing2)
         ) {
-            SampleCompositionReasons.forEach { reason -> CompositionReasonCard(reason = reason) }
+            compositionReasons.forEach { reason -> CompositionReasonCard(reason = reason) }
         }
         Spacer(modifier = Modifier.height(38.dp))
         SectionTitle(text = "요일별 추천 이유")
@@ -157,7 +179,7 @@ fun RoutineAiReasonScreen(
                 .background(White)
                 .border(DividerWidth, BorderDefault, ShapeLarge)
         ) {
-            SampleDayReasons.forEachIndexed { index, reason ->
+            dayReasons.forEachIndexed { index, reason ->
                 DayReasonItem(
                     reason = reason,
                     expanded = expandedDay == reason.dayLabel,

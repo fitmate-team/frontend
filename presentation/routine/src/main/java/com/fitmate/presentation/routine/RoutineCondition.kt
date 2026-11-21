@@ -17,7 +17,7 @@ data class RoutineCondition(
     val placeLabel: String get() = if (place == WORKOUT_PLACE_GYM) gymName else place
 }
 
-// 서버 연동 전까지 사용하는 예시 데이터
+// 미리보기용 예시 데이터
 val SampleRoutineCondition = RoutineCondition(
     goal = "체지방 감량 · 균형형",
     days = setOf("월", "목", "금", "일"),
@@ -26,5 +26,5 @@ val SampleRoutineCondition = RoutineCondition(
     gymName = "Fit Gym"
 )
 
-// 사용자가 저장한 헬스장 목록 (예시)
+// 미리보기용 저장된 헬스장 목록
 val SampleSavedGyms = listOf("Fit Gym", "별내 피트니스 센터")

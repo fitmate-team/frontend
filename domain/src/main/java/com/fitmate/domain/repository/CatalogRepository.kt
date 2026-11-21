@@ -10,4 +10,7 @@ interface CatalogRepository {
     suspend fun getEquipments(location: ExerciseLocation): Result<List<Equipment>>
 
     suspend fun getExercises(): Result<List<Exercise>>
+
+    // 운동 환경의 기구로 할 수 있는 운동 (로그인 필요)
+    suspend fun getAvailableExercises(environmentId: Long): Result<List<Exercise>>
 }

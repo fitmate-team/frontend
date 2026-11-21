@@ -8,6 +8,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.fitmate.domain.model.BaselineRecordType
+import com.fitmate.domain.model.MuscleGroup
 import com.fitmate.presentation.designsystem.component.DaySelectorRow
 import com.fitmate.presentation.designsystem.component.FitMateFormScaffold
 import com.fitmate.presentation.designsystem.component.FitMatePrimaryButton
@@ -49,8 +51,8 @@ fun ManualDaySelectionScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing2)) {
                     draft.orderedDays.forEach { day ->
                         val settings = draft.days.getValue(day)
-                        val names = settings.map { it.name }
-                        val (icon, iconSize) = when (routineTitleOf(names)) {
+                        val title = routineTitleOf(settings)
+                        val (icon, iconSize) = when (title) {
                             "하체" -> PlanIcon.Lower
                             "유산소" -> PlanIcon.Cardio
                             else -> PlanIcon.Upper
@@ -59,8 +61,8 @@ fun ManualDaySelectionScreen(
                             dayLabel = day,
                             icon = icon,
                             iconSize = iconSize,
-                            title = routineTitleOf(names),
-                            exercises = names.take(3).joinToString(" · ") { shortNameOf(it) },
+                            title = title,
+                            exercises = settings.take(3).joinToString(" · ") { it.name },
                             footer = WeeklyPlanFooter.Rest("휴식 ${settings.firstNotNullOfOrNull { it.rest } ?: "90초"}"),
                             onClick = { onOpenDay(day) }
                         )
@@ -81,9 +83,9 @@ private fun ManualDaySelectionScreenPreview() {
 @Composable
 private fun ManualDaySelectionScreenFilledPreview() {
     val upper = listOf(
-        ExerciseSetting("벤치 프레스", rest = "90초"),
-        ExerciseSetting("숄더 프레스"),
-        ExerciseSetting("체스트 프레스")
+        ExerciseSetting("EX_1", "벤치 프레스", BaselineRecordType.WEIGHT_REPS_SETS, MuscleGroup.CHEST, rest = "90초"),
+        ExerciseSetting("EX_2", "숄더 프레스", BaselineRecordType.WEIGHT_REPS_SETS, MuscleGroup.SHOULDERS),
+        ExerciseSetting("EX_3", "체스트 프레스", BaselineRecordType.WEIGHT_REPS_SETS, MuscleGroup.CHEST)
     )
     FitMateTheme {
         ManualDaySelectionScreen(
