@@ -16,9 +16,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+
 import com.fitmate.presentation.designsystem.theme.*
 import com.fitmate.presentation.workout.today.PrimaryWorkoutButton
 
@@ -28,17 +29,14 @@ data class ExerciseSetting(
     val reps: String = "",
     val weight: String = "",
     val restSeconds: Int? = null,
-    val isSaved: Boolean = false
+    val isSaved: Boolean = false,
+    val durationSeconds: String = ""
 )
 
 @Composable
 fun WorkoutExerciseSettingScreen(
     modifier: Modifier = Modifier,
-    selectedExercises: List<SelectableExercise> = listOf(
-        SelectableExercise(1, "벤치프레스", "가슴", "프리웨이트"),
-        SelectableExercise(2, "인클라인 덤벨프레스", "가슴", "프리웨이트"),
-        SelectableExercise(3, "체스트프레스", "가슴", "머신/케이블")
-    ),
+    selectedExercises: List<SelectableExercise> = emptyList(),
     isSaving: Boolean = false,
     onBack: () -> Unit = {},
     onComplete: (List<ExerciseSetting>) -> Unit = {}
@@ -47,13 +45,22 @@ fun WorkoutExerciseSettingScreen(
         mutableStateListOf<ExerciseSetting>().apply {
             addAll(
                 selectedExercises.map { exercise ->
-                    ExerciseSetting(exercise = exercise)
+                    val isDuration =
+                        exercise.baselineRecordType == "DURATION"
+
+                    ExerciseSetting(
+                        exercise = exercise,
+                        sets = if (isDuration) "1" else "",
+                        restSeconds = if (isDuration) 0 else null
+                    )
                 }
             )
         }
     }
 
-    var selectedIndex by remember { mutableIntStateOf(0) }
+    var selectedIndex by remember(selectedExercises) {
+        mutableIntStateOf(0)
+    }
 
     if (settings.isEmpty()) {
         Box(
@@ -66,6 +73,7 @@ fun WorkoutExerciseSettingScreen(
     }
 
     val current = settings[selectedIndex]
+    val baselineType = current.exercise.baselineRecordType
 
     fun updateCurrent(
         transform: (ExerciseSetting) -> ExerciseSetting
@@ -73,13 +81,49 @@ fun WorkoutExerciseSettingScreen(
         settings[selectedIndex] = transform(settings[selectedIndex])
     }
 
+    // 운동 유형별 입력 항목
+    val requiresReps =
+        baselineType == "REPS_SETS" ||
+                baselineType == "WEIGHT_REPS_SETS"
+
+    val requiresWeight = baselineType == "WEIGHT_REPS_SETS"
+    val requiresDuration = baselineType == "DURATION"
+
+    // 초 단위 저장값을 분 단위로 표시
+    val durationMinutes = current.durationSeconds
+        .toIntOrNull()
+        ?.div(60)
+        ?.toString()
+        .orEmpty()
+
+    // 운동 유형별 입력값 검증
+    val validInput = when (baselineType) {
+        "DURATION" -> {
+            (current.durationSeconds.toIntOrNull() ?: 0) > 0
+        }
+
+        "WEIGHT_REPS_SETS" -> {
+            current.restSeconds != null &&
+                    (current.sets.toIntOrNull() ?: 0) > 0 &&
+                    (current.reps.toIntOrNull() ?: 0) > 0 &&
+                    (current.weight.toIntOrNull() ?: -1) >= 0
+        }
+
+        "REPS_SETS" -> {
+            current.restSeconds != null &&
+                    (current.sets.toIntOrNull() ?: 0) > 0 &&
+                    (current.reps.toIntOrNull() ?: 0) > 0
+        }
+
+        else -> false
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(White)
     ) {
-
-        // 상단 타이틀
+        // 상단 헤더
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -93,7 +137,7 @@ fun WorkoutExerciseSettingScreen(
                 contentDescription = "뒤로가기",
                 modifier = Modifier
                     .size(24.dp)
-                    .clickable { onBack() },
+                    .clickable(onClick = onBack),
                 tint = TextPrimary
             )
 
@@ -105,26 +149,29 @@ fun WorkoutExerciseSettingScreen(
             )
         }
 
-        // 선택한 운동 칩
+        // 선택한 운동 목록
         LazyRow(
             modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = 24.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             itemsIndexed(settings) { index, setting ->
-
                 val selected = selectedIndex == index
 
                 Box(
                     modifier = Modifier
                         .border(
-                            1.dp,
-                            if (selected) Blue500 else BorderDefault,
-                            RoundedCornerShape(50)
+                            width = 1.dp,
+                            color = if (selected) {
+                                Blue500
+                            } else {
+                                BorderDefault
+                            },
+                            shape = RoundedCornerShape(50)
                         )
                         .background(
-                            if (selected) Blue100 else White,
-                            RoundedCornerShape(50)
+                            color = if (selected) Blue100 else White,
+                            shape = RoundedCornerShape(50)
                         )
                         .clickable {
                             selectedIndex = index
@@ -157,7 +204,6 @@ fun WorkoutExerciseSettingScreen(
                     vertical = 24.dp
                 )
         ) {
-
             Text(
                 text = "운동 세부 강도 설정",
                 color = TextPrimary,
@@ -167,22 +213,49 @@ fun WorkoutExerciseSettingScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            // 세트 / 횟수 / 중량 입력
+            // 운동 유형별 세부 강도 입력
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(92.dp)
                     .border(
-                        1.dp,
-                        BorderDefault,
-                        RoundedCornerShape(20.dp)
+                        width = 1.dp,
+                        color = BorderDefault,
+                        shape = RoundedCornerShape(20.dp)
                     )
                     .padding(vertical = 20.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // 중량이 필요한 운동에만 표시
+                if (requiresWeight) {
+                    ExerciseNumberInput(
+                        label = "중량(kg)",
+                        value = current.weight,
+                        onValueChange = { value ->
+                            updateCurrent {
+                                it.copy(
+                                    weight = value,
+                                    isSaved = false
+                                )
+                            }
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    VerticalDivider(
+                        modifier = Modifier.height(46.dp),
+                        color = BorderDefault
+                    )
+                }
+
+                // 유산소 운동은 세트 1 고정
                 ExerciseNumberInput(
                     label = "세트",
-                    value = current.sets,
+                    value = if (requiresDuration) {
+                        "1"
+                    } else {
+                        current.sets
+                    },
                     onValueChange = { value ->
                         updateCurrent {
                             it.copy(
@@ -191,144 +264,200 @@ fun WorkoutExerciseSettingScreen(
                             )
                         }
                     },
-                    modifier = Modifier.weight(1f)
-                )
-
-                VerticalDivider(
-                    modifier = Modifier.height(46.dp),
-                    color = BorderDefault
-                )
-
-                ExerciseNumberInput(
-                    label = "횟수",
-                    value = current.reps,
-                    onValueChange = { value ->
-                        updateCurrent {
-                            it.copy(
-                                reps = value,
-                                isSaved = false
-                            )
-                        }
-                    },
-                    modifier = Modifier.weight(1f)
-                )
-
-                VerticalDivider(
-                    modifier = Modifier.height(46.dp),
-                    color = BorderDefault
-                )
-
-                ExerciseNumberInput(
-                    label = "중량(kg)",
-                    value = current.weight,
-                    onValueChange = { value ->
-                        updateCurrent {
-                            it.copy(
-                                weight = value,
-                                isSaved = false
-                            )
-                        }
-                    },
                     modifier = Modifier.weight(1f),
-                    allowDecimal = true
+                    enabled = !requiresDuration
                 )
-            }
 
-            Spacer(Modifier.height(32.dp))
+                // 횟수 또는 시간 입력 영역 구분선
+                if (requiresReps || requiresDuration) {
+                    VerticalDivider(
+                        modifier = Modifier.height(46.dp),
+                        color = BorderDefault
+                    )
+                }
 
-            Text(
-                text = "휴식 시간",
-                color = TextPrimary,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold
-            )
+                // 반복 횟수가 필요한 운동
+                if (requiresReps) {
+                    ExerciseNumberInput(
+                        label = "횟수",
+                        value = current.reps,
+                        onValueChange = { value ->
+                            updateCurrent {
+                                it.copy(
+                                    reps = value,
+                                    isSaved = false
+                                )
+                            }
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
 
-            Spacer(Modifier.height(16.dp))
+                // 유산소 운동 시간
+                if (requiresDuration) {
+                    ExerciseNumberInput(
+                        label = "시간(분)",
+                        value = durationMinutes,
+                        onValueChange = { value ->
+                            val minutes = value.toIntOrNull()
 
-            val restOptions = listOf(
-                30 to "30초",
-                60 to "60초",
-                90 to "90초",
-                120 to "2분",
-                180 to "3분"
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                restOptions.forEach { (seconds, label) ->
-
-                    val selected = current.restSeconds == seconds
-
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(36.dp)
-                            .border(
-                                width = 1.dp,
-                                color = if (selected) Blue500 else BorderDefault,
-                                shape = RoundedCornerShape(10.dp)
-                            )
-                            .background(
-                                color = if (selected) Blue100 else White,
-                                shape = RoundedCornerShape(10.dp)
-                            )
-                            .clickable {
+                            if (value.isEmpty()) {
                                 updateCurrent {
                                     it.copy(
-                                        restSeconds = seconds,
+                                        durationSeconds = "",
                                         isSaved = false
                                     )
                                 }
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (selected) Blue600 else TextSecondary
-                        )
+                            } else if (
+                                minutes != null &&
+                                minutes <= Int.MAX_VALUE / 60
+                            ) {
+                                updateCurrent {
+                                    it.copy(
+                                        durationSeconds =
+                                            (minutes * 60).toString(),
+                                        isSaved = false
+                                    )
+                                }
+                            }
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
+            // 유산소 운동은 휴식 시간 선택 영역 숨김
+            if (!requiresDuration) {
+                Spacer(Modifier.height(32.dp))
+
+                Text(
+                    text = "휴식 시간",
+                    color = TextPrimary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                val restOptions = listOf(
+                    30 to "30초",
+                    60 to "60초",
+                    90 to "90초",
+                    120 to "2분",
+                    180 to "3분"
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    restOptions.forEach { (seconds, label) ->
+                        val selected = current.restSeconds == seconds
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(36.dp)
+                                .border(
+                                    width = 1.dp,
+                                    color = if (selected) {
+                                        Blue500
+                                    } else {
+                                        BorderDefault
+                                    },
+                                    shape = RoundedCornerShape(10.dp)
+                                )
+                                .background(
+                                    color = if (selected) {
+                                        Blue100
+                                    } else {
+                                        White
+                                    },
+                                    shape = RoundedCornerShape(10.dp)
+                                )
+                                .clickable {
+                                    updateCurrent {
+                                        it.copy(
+                                            restSeconds = seconds,
+                                            isSaved = false
+                                        )
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (selected) {
+                                    Blue600
+                                } else {
+                                    TextSecondary
+                                }
+                            )
+                        }
                     }
                 }
             }
 
             Spacer(Modifier.height(28.dp))
 
-            // AI 추천 정보
+            // 운동 설정 요약 카드
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .border(
-                        1.dp,
-                        Blue500,
-                        RoundedCornerShape(10.dp)
+                        width = 1.dp,
+                        color = Blue500,
+                        shape = RoundedCornerShape(10.dp)
                     )
                     .background(
-                        Blue100,
-                        RoundedCornerShape(10.dp)
+                        color = Blue100,
+                        shape = RoundedCornerShape(10.dp)
                     )
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
-                    text = "AI 추천 – ${current.exercise.name}",
+                    text = "운동 설정 – ${current.exercise.name}",
                     color = Blue600,
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.SemiBold
                 )
 
+                val detailText = when (baselineType) {
+                    "WEIGHT_REPS_SETS" ->
+                        "${current.weight.ifBlank { "-" }}kg · " +
+                                "${current.sets.ifBlank { "-" }}세트 · " +
+                                "${current.reps.ifBlank { "-" }}회"
+
+                    "REPS_SETS" ->
+                        "${current.sets.ifBlank { "-" }}세트 · " +
+                                "${current.reps.ifBlank { "-" }}회"
+
+                    "DURATION" ->
+                        "1세트 · ${durationMinutes.ifBlank { "-" }}분"
+
+                    else -> "운동 정보를 입력해 주세요."
+                }
+
                 Text(
-                    text = "4세트 · 8회 · 42.5kg · 휴식 90초",
+                    text = detailText,
                     color = Blue600,
                     style = MaterialTheme.typography.bodySmall
                 )
 
-                Text(
-                    text = "최근 4회 평균 성공률 94%를 기준으로 추천해요.",
-                    color = TextSecondary,
-                    style = MaterialTheme.typography.bodySmall
-                )
+                // 유산소 운동은 휴식 시간 안내 숨김
+                if (!requiresDuration) {
+                    Text(
+                        text = if (current.restSeconds != null) {
+                            "휴식 ${current.restSeconds}초"
+                        } else {
+                            "휴식 시간을 선택해 주세요."
+                        },
+                        color = TextSecondary,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
             }
         }
 
@@ -347,20 +476,39 @@ fun WorkoutExerciseSettingScreen(
                 label = when {
                     isSaving -> "저장 중..."
                     !current.isSaved -> "저장하기"
-                    selectedIndex == settings.lastIndex -> "완료"
+                    settings.all { it.isSaved } -> "완료"
                     else -> "다음"
                 },
                 onClick = {
                     if (isSaving) return@PrimaryWorkoutButton
 
                     if (!current.isSaved) {
+                        if (!validInput) return@PrimaryWorkoutButton
+
                         updateCurrent {
-                            it.copy(isSaved = true)
+                            if (requiresDuration) {
+                                it.copy(
+                                    sets = "1",
+                                    reps = "",
+                                    weight = "",
+                                    restSeconds = 0,
+                                    isSaved = true
+                                )
+                            } else {
+                                it.copy(isSaved = true)
+                            }
                         }
-                    } else if (selectedIndex < settings.lastIndex) {
-                        selectedIndex++
-                    } else {
+
+                    } else if (settings.all { it.isSaved }) {
                         onComplete(settings.toList())
+
+                    } else {
+                        val nextUnsavedIndex =
+                            settings.indexOfFirst { !it.isSaved }
+
+                        if (nextUnsavedIndex != -1) {
+                            selectedIndex = nextUnsavedIndex
+                        }
                     }
                 }
             )
@@ -368,13 +516,15 @@ fun WorkoutExerciseSettingScreen(
     }
 }
 
+// 공통 운동 숫자 입력 컴포넌트
 @Composable
 private fun ExerciseNumberInput(
     label: String,
     value: String,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
-    allowDecimal: Boolean = false
+    allowDecimal: Boolean = false,
+    enabled: Boolean = true
 ) {
     Column(
         modifier = modifier,
@@ -389,11 +539,16 @@ private fun ExerciseNumberInput(
 
         BasicTextField(
             value = value,
+            enabled = enabled,
             onValueChange = { input ->
                 val filtered = if (allowDecimal) {
-                    input.filter { it.isDigit() || it == '.' }
+                    input.filter {
+                        it.isDigit() || it == '.'
+                    }
                 } else {
-                    input.filter { it.isDigit() }
+                    input.filter {
+                        it.isDigit()
+                    }
                 }
 
                 onValueChange(filtered)
@@ -423,6 +578,7 @@ private fun ExerciseNumberInput(
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
+
                     innerTextField()
                 }
             }

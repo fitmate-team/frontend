@@ -22,12 +22,14 @@ import androidx.compose.ui.unit.dp
 import com.fitmate.presentation.designsystem.theme.*
 import com.fitmate.presentation.workout.today.PrimaryWorkoutButton
 
+
 data class SelectableExercise(
     val id: Int,
     val name: String,
     val category: String,
     val equipment: String,
-    val exerciseCode: String = ""
+    val exerciseCode: String = "",
+    val baselineRecordType: String = "WEIGHT_REPS_SETS"
 )
 
 private val exerciseCategories = listOf(
