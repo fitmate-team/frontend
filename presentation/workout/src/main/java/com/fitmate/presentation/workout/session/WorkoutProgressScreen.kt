@@ -40,7 +40,9 @@ import com.fitmate.presentation.designsystem.theme.Gray200
 import com.fitmate.presentation.designsystem.theme.Gray50
 import com.fitmate.presentation.workout.result.NextWorkoutAdjustmentItem
 import com.fitmate.presentation.workout.result.NextWorkoutAdjustmentScreen
-import com.fitmate.presentation.workout.result.WorkoutAnalysisItem
+import com.fitmate.presentation.workout.result.toAnalysisItems
+import com.fitmate.domain.model.WorkoutRecordDetail
+import com.fitmate.presentation.designsystem.component.FitMateSkeleton
 import com.fitmate.presentation.workout.result.WorkoutAnalysisScreen
 import com.fitmate.presentation.workout.record.WorkoutBodyRecordScreen
 import com.fitmate.presentation.workout.components.WorkoutGuideContent
@@ -109,7 +111,12 @@ fun WorkoutProgressScreen(
     isFinishing: Boolean = false,
     finishErrorMessage: String? = null,
 
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    analysis: WorkoutRecordDetail? = null,
+    isAnalysisLoading: Boolean = false,
+    analysisErrorMessage: String? = null,
+    onLoadAnalysis: () -> Unit = {},
+    onResultDone: () -> Unit = onBack
 ) {
     if (exercises.isEmpty()) return
 
@@ -160,7 +167,7 @@ fun WorkoutProgressScreen(
             val now = SystemClock.elapsedRealtime()
             val elapsed = now - last
             last = now
-            if (!paused) {
+            if (!paused && !showGuide) {
                 carryMs += elapsed
                 val whole = carryMs / 1000L
                 if (whole > 0) {
@@ -184,7 +191,12 @@ fun WorkoutProgressScreen(
     if (showAdjustment) {
 
         // AI 추천 화면 진입 시 실제 서버 데이터 조회
-        LaunchedEffect(isWorkoutSaved) {
+        LaunchedEffect(
+            isWorkoutSaved,
+            recommendation,
+            isRecommendationLoading,
+            recommendationErrorMessage
+        ) {
             if (
                 isWorkoutSaved &&
                 recommendation == null &&
@@ -277,7 +289,7 @@ fun WorkoutProgressScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator()
+                    FitMateSkeleton(modifier = Modifier.fillMaxWidth().padding(24.dp).height(120.dp))
                 }
             }
             isRecommendationLoading || recommendation == null &&
@@ -286,7 +298,7 @@ fun WorkoutProgressScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator()
+                    FitMateSkeleton(modifier = Modifier.fillMaxWidth().padding(24.dp).height(120.dp))
                 }
             }
 
@@ -326,61 +338,40 @@ fun WorkoutProgressScreen(
 
 
     if (showAnalysis) {
+        LaunchedEffect(isWorkoutSaved) {
+            if (isWorkoutSaved) onLoadAnalysis()
+        }
+
+        val error = if (!isWorkoutSaved) finishErrorMessage else analysisErrorMessage
         WorkoutAnalysisScreen(
-            items = exercises.map { item ->
-                WorkoutAnalysisItem(
-                    name = item.name,
-                    weightKg = item.weightKg,
-                    reps = item.reps,
-                    totalSets = item.sets,
-                    completedSets = completedSets[item.id] ?: 0,
-                    durationSeconds = item.durationSeconds,
-                    completedDurationSeconds = (exerciseElapsed[item.id] ?: 0L).toInt(),
-                    difficulty = selectedDifficulty?.let { difficulty ->
-                        when (difficulty) {
-                            WorkoutDifficulty.VERY_EASY -> "매우 쉬움"
-                            WorkoutDifficulty.EASY -> "쉬움"
-                            WorkoutDifficulty.MODERATE -> "보통"
-                            WorkoutDifficulty.HARD -> "어려움"
-                            WorkoutDifficulty.TOO_HARD -> "매우 어려움"
-                        }
-                    }
-                )
+            items = analysis?.toAnalysisItems().orEmpty(),
+            totalSeconds = analysis?.actualExerciseSeconds ?: 0L,
+            restSeconds = analysis?.actualRestSeconds,
+            minHeartRate = analysis?.minHeartRate,
+            maxHeartRate = analysis?.maxHeartRate,
+            completionRate = analysis?.completionRate,
+            hasNextRoutine = analysis?.hasNextRoutine == true,
+            isLoading = error == null && (!isWorkoutSaved || isAnalysisLoading || analysis == null),
+            errorMessage = error,
+            onRetry = {
+                if (isWorkoutSaved) onLoadAnalysis()
+                else if (!isFinishing) pendingFinishResult?.let(onFinish)
             },
-            totalSeconds = totalSeconds,
-            restSeconds = accumulatedRestSeconds,
-            onBack = { showAnalysis = false; showDifficulty = true },
-
-
+            onBack = {
+                if (!isFinishing && isWorkoutSaved) onResultDone()
+                else if (!isFinishing && finishErrorMessage != null) {
+                    showAnalysis = false
+                    showDifficulty = true
+                }
+            },
             onNext = {
-                val difficulty = selectedDifficulty
-
-                if (difficulty != null) {
-                    if (isWorkoutSaved) {
+                if (isWorkoutSaved && analysis != null) {
+                    if (analysis.hasNextRoutine) {
                         showAnalysis = false
                         showAdjustment = true
-                    } else if (!isFinishing) {
-                        val result = WorkoutSessionResult(
-                            totalSeconds = totalSeconds,
-                            exerciseSeconds = (
-                                    totalSeconds - accumulatedRestSeconds
-                                    ).coerceAtLeast(0L),
-                            restSeconds = accumulatedRestSeconds,
-                            completedSets = completedSets.toMap(),
-                            exerciseElapsed = exerciseElapsed.toMap(),
-                            difficulty = difficulty
-                        )
-
-                        pendingFinishResult = result
-                        onFinish(result)
-
-                        showAnalysis = false
-                        showAdjustment = true
-                    }
+                    } else onResultDone()
                 }
             }
-
-
         )
         return
     }
@@ -390,8 +381,18 @@ fun WorkoutProgressScreen(
             onBack = { showDifficulty = false; showBodyRecord = true },
             onAnalyze = { difficulty ->
                 selectedDifficulty = difficulty
+                val result = WorkoutSessionResult(
+                    totalSeconds = totalSeconds,
+                    exerciseSeconds = (totalSeconds - accumulatedRestSeconds).coerceAtLeast(0L),
+                    restSeconds = accumulatedRestSeconds,
+                    completedSets = completedSets.toMap(),
+                    exerciseElapsed = exerciseElapsed.toMap(),
+                    difficulty = difficulty
+                )
+                pendingFinishResult = result
                 showDifficulty = false
                 showAnalysis = true
+                onFinish(result)
             }
         )
         return
@@ -949,7 +950,3 @@ private fun formatTime(seconds: Long): String {
     val safe = seconds.coerceAtLeast(0L)
     return "%02d:%02d:%02d".format(safe / 3600, (safe / 60) % 60, safe % 60)
 }
-
-
-
-

@@ -1,4 +1,3 @@
-
 package com.fitmate.presentation.workout.session
 
 import android.util.Log
@@ -6,8 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fitmate.domain.model.ExerciseGuide
 import com.fitmate.domain.model.FinishWorkout
-import com.fitmate.domain.model.WorkoutAdjustmentRecommendation
-import com.fitmate.domain.model.ApplyWorkoutAdjustments
 import com.fitmate.domain.repository.WorkoutRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -26,17 +23,7 @@ data class WorkoutSessionUiState(
     // 운동 종료
     val isFinishing: Boolean = false,
     val isFinished: Boolean = false,
-    val errorMessage: String? = null,
-
-    // AI 운동 강도 추천
-    val isRecommendationLoading: Boolean = false,
-    val recommendation: WorkoutAdjustmentRecommendation? = null,
-    val recommendationErrorMessage: String? = null,
-
-    // AI 추천 적용
-    val isApplyingAdjustments: Boolean = false,
-    val isAdjustmentsApplied: Boolean = false,
-    val applyErrorMessage: String? = null
+    val errorMessage: String? = null
 )
 
 @HiltViewModel
@@ -268,90 +255,6 @@ class WorkoutSessionViewModel @Inject constructor(
                     )
                 }
         }
-    }
-
-    /**
-     * 운동 종료 후 AI 운동 강도 추천 조회
-     */
-    fun loadWorkoutRecommendations(workoutRecordId: Long) {
-        if (_uiState.value.isRecommendationLoading) return
-
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                isRecommendationLoading = true,
-                recommendationErrorMessage = null
-            )
-
-            workoutRepository
-                .recommendAdjustments(workoutRecordId)
-                .onSuccess { recommendation ->
-                    _uiState.value = _uiState.value.copy(
-                        isRecommendationLoading = false,
-                        recommendation = recommendation
-                    )
-                }
-                .onFailure { error ->
-                    _uiState.value = _uiState.value.copy(
-                        isRecommendationLoading = false,
-                        recommendationErrorMessage = error.message
-                            ?: "운동 강도 추천을 불러오지 못했어요."
-                    )
-                }
-        }
-    }
-
-    /**
-     * 사용자가 선택한 AI 추천 변경사항 저장
-     */
-    fun applyWorkoutRecommendations(
-        workoutRecordId: Long,
-        request: ApplyWorkoutAdjustments
-    ) {
-        if (
-            _uiState.value.isApplyingAdjustments ||
-            _uiState.value.isAdjustmentsApplied
-        ) return
-
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                isApplyingAdjustments = true,
-                applyErrorMessage = null
-            )
-
-            workoutRepository
-                .applyAdjustments(
-                    workoutRecordId = workoutRecordId,
-                    request = request
-                )
-                .onSuccess {
-                    _uiState.value = _uiState.value.copy(
-                        isApplyingAdjustments = false,
-                        isAdjustmentsApplied = true
-                    )
-                }
-                .onFailure { error ->
-                    _uiState.value = _uiState.value.copy(
-                        isApplyingAdjustments = false,
-                        applyErrorMessage = error.message
-                            ?: "운동 강도 변경사항 저장에 실패했어요."
-                    )
-                }
-        }
-    }
-
-    /**
-     * AI 추천 관련 오류 초기화
-     */
-    fun clearRecommendationError() {
-        _uiState.value = _uiState.value.copy(
-            recommendationErrorMessage = null
-        )
-    }
-
-    fun clearApplyError() {
-        _uiState.value = _uiState.value.copy(
-            applyErrorMessage = null
-        )
     }
 
     /**
