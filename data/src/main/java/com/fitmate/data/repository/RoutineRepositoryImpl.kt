@@ -36,7 +36,15 @@ import com.fitmate.domain.model.WeeklyRoutine
 import com.fitmate.domain.model.WeeklyRoutineRecommendation
 import com.fitmate.domain.model.WorkoutDay
 import com.fitmate.domain.repository.RoutineRepository
+import com.fitmate.data.remote.dto.DailyAiRoutineRequestDto
+import com.fitmate.data.remote.dto.DailyRoutineSaveRequestDto
+import com.fitmate.data.remote.dto.DailyExerciseReplacementDto
+import com.fitmate.data.remote.dto.DailyReplacementExerciseDto
+import com.fitmate.domain.model.DailyRoutineRecommendation
+import com.fitmate.domain.model.DailyExerciseReplacement
+import com.fitmate.domain.model.DailyReplacementExercise
 import java.time.LocalDate
+import android.annotation.SuppressLint
 import javax.inject.Inject
 
 private const val WEEKLY_ROUTINE_NOT_FOUND = "WEEKLY_ROUTINE_NOT_FOUND"
@@ -129,6 +137,70 @@ class RoutineRepositoryImpl @Inject constructor(
         )
         if (regenerate) routineApi.regenerateCustomRoutine(request) else routineApi.saveCustomRoutine(request)
     }
+
+
+    override suspend fun recommendDailyRoutine(
+        environmentId: Long,
+        sessionMinutes: Int
+    ): Result<DailyRoutineRecommendation> = apiCall {
+        val response = routineApi.recommendDailyRoutine(
+            DailyAiRoutineRequestDto(
+                environmentId = environmentId,
+                sessionMinutes = sessionMinutes
+            )
+        )
+
+        DailyRoutineRecommendation(
+            mainTarget = response.mainTarget,
+            estimatedMinutes = response.estimatedMinutes,
+            replacements = response.replacements.map { item ->
+                DailyExerciseReplacement(
+                    originalExerciseCode = item.originalExerciseCode,
+                    replacementExercise = DailyReplacementExercise(
+                        exerciseCode = item.replacementExercise.exerciseCode,
+                        nameKo = item.replacementExercise.nameKo,
+                        weightKg = item.replacementExercise.weightKg,
+                        reps = item.replacementExercise.reps,
+                        sets = item.replacementExercise.sets,
+                        durationSeconds = item.replacementExercise.durationSeconds,
+                        restSeconds = item.replacementExercise.restSeconds,
+                        appliedAdjustmentId = item.replacementExercise.appliedAdjustmentId
+                    )
+                )
+            }
+        )
+    }
+
+    override suspend fun saveDailyRoutine(
+        environmentId: Long,
+        sessionMinutes: Int,
+        recommendation: DailyRoutineRecommendation
+    ): Result<Unit> = apiCall {
+        routineApi.saveDailyRoutine(
+            DailyRoutineSaveRequestDto(
+                environmentId = environmentId,
+                sessionMinutes = sessionMinutes,
+                mainTarget = recommendation.mainTarget,
+                estimatedMinutes = recommendation.estimatedMinutes,
+                replacements = recommendation.replacements.map { item ->
+                    DailyExerciseReplacementDto(
+                        originalExerciseCode = item.originalExerciseCode,
+                        replacementExercise = DailyReplacementExerciseDto(
+                            exerciseCode = item.replacementExercise.exerciseCode,
+                            nameKo = item.replacementExercise.nameKo,
+                            weightKg = item.replacementExercise.weightKg,
+                            reps = item.replacementExercise.reps,
+                            sets = item.replacementExercise.sets,
+                            durationSeconds = item.replacementExercise.durationSeconds,
+                            restSeconds = item.replacementExercise.restSeconds,
+                            appliedAdjustmentId = item.replacementExercise.appliedAdjustmentId
+                        )
+                    )
+                }
+            )
+        )
+    }
+
 }
 
 private fun RoutineExerciseResponseDto.toDomain() = ExercisePrescription(

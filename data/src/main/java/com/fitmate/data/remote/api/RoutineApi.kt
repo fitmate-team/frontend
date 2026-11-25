@@ -13,6 +13,9 @@ import com.fitmate.data.remote.dto.WeeklyAiRoutineRequestDto
 import com.fitmate.data.remote.dto.WeeklyRoutineOutputDto
 import com.fitmate.data.remote.dto.WeeklyRoutineResponseDto
 import com.fitmate.data.remote.dto.WeeklyRoutineSaveRequestDto
+import com.fitmate.data.remote.dto.DailyAiRoutineRequestDto
+import com.fitmate.data.remote.dto.DailyRoutineOutputDto
+import com.fitmate.data.remote.dto.DailyRoutineSaveRequestDto
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
@@ -57,4 +60,18 @@ interface RoutineApi {
 
     @POST("api/ai/custom-routines/summary")
     suspend fun summarizeDailyRoutine(@Body request: CustomAiSummaryRequestDto): CustomSummaryOutputDto
+
+
+    // 오늘 하루 운동 AI 재추천
+    @POST("api/ai/daily-routines")
+    suspend fun recommendDailyRoutine(
+        @Body request: DailyAiRoutineRequestDto
+    ): DailyRoutineOutputDto
+
+    // AI 재추천 결과를 오늘의 루틴에 반영
+    @POST("api/routine/daily")
+    suspend fun saveDailyRoutine(
+        @Body request: DailyRoutineSaveRequestDto
+    ): Unit
+
 }

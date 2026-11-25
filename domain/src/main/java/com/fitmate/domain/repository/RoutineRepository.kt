@@ -8,6 +8,7 @@ import com.fitmate.domain.model.PrescriptionRecommendation
 import com.fitmate.domain.model.TodayRoutine
 import com.fitmate.domain.model.WeeklyRoutine
 import com.fitmate.domain.model.WeeklyRoutineRecommendation
+import com.fitmate.domain.model.DailyRoutineRecommendation
 import com.fitmate.domain.model.WorkoutDay
 
 interface RoutineRepository {
@@ -52,5 +53,17 @@ interface RoutineRepository {
         environmentId: Long,
         days: List<DailyRoutine>,
         regenerate: Boolean = false
+    ): Result<Unit>
+
+
+    suspend fun recommendDailyRoutine(
+        environmentId: Long,
+        sessionMinutes: Int
+    ): Result<DailyRoutineRecommendation>
+
+    suspend fun saveDailyRoutine(
+        environmentId: Long,
+        sessionMinutes: Int,
+        recommendation: DailyRoutineRecommendation
     ): Result<Unit>
 }
