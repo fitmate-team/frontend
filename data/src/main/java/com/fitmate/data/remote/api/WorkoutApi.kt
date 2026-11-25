@@ -12,6 +12,7 @@ import com.fitmate.data.remote.dto.ApplyWorkoutAdjustmentsRequestDto
 import com.fitmate.data.remote.dto.AvailableExercisesResponseDto
 import com.fitmate.data.remote.dto.ExerciseGuideResponseDto
 import com.fitmate.data.remote.dto.UpdateDailyRoutineExercisesRequestDto
+import com.fitmate.data.remote.dto.EnvironmentAvailableExerciseDto
 import retrofit2.http.Query
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -76,6 +77,12 @@ interface WorkoutApi {
         @Path("dailyRoutineId") dailyRoutineId: Long,
         @Body request: UpdateDailyRoutineExercisesRequestDto
     ): Unit
+
+    // 선택한 운동 환경에서 수행 가능한 운동 목록
+    @GET("api/exercises/available")
+    suspend fun getExercisesAvailableByEnvironment(
+        @Query("environmentId") environmentId: Long
+    ): List<EnvironmentAvailableExerciseDto>
 
 
 }

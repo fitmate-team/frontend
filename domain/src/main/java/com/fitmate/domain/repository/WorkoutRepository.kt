@@ -58,5 +58,10 @@ interface WorkoutRepository {
     ): Result<Unit>
 
 
+    // 선택한 운동 환경에서 수행 가능한 운동 조회
+    suspend fun getExercisesAvailableByEnvironment(
+        environmentId: Long
+    ): Result<List<ExerciseCatalogItem>>
+
 }
 
