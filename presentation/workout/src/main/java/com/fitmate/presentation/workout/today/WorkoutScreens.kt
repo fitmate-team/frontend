@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Place
@@ -18,6 +19,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.fitmate.domain.model.TodayWorkout
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.sp
+import com.fitmate.presentation.designsystem.component.FitMateCompactButton
+import com.fitmate.presentation.designsystem.component.FitMateSkeleton
 
 import com.fitmate.presentation.designsystem.R
 import com.fitmate.presentation.designsystem.component.ExerciseListItem
@@ -87,7 +92,14 @@ fun TodayWorkoutScreen(
     onBack: () -> Unit = {},
     onWeightSettingClick: (Int) -> Unit = {},
     onChangeLocation: () -> Unit = {},
-    onStartWorkout: () -> Unit = {}
+    onStartWorkout: () -> Unit = {},
+    isRestDay: Boolean = false,
+    onViewWeeklyRoutine: () -> Unit = {},
+    hasNoWeeklyRoutine: Boolean = false,
+    onCreateRoutine: () -> Unit = {},
+    errorMessage: String? = null,
+    onRetry: () -> Unit = {},
+    isLoading: Boolean = false
 ) {
     Column(
         modifier = modifier
@@ -130,8 +142,12 @@ fun TodayWorkoutScreen(
                 )
             }
 
-            // 운동 환경 변경 버튼
-            if (!isPreview) {
+            if (!isPreview &&
+                !isRestDay &&
+                !hasNoWeeklyRoutine &&
+                errorMessage == null &&
+                !isLoading
+            ) {
                 Row(
                     modifier = Modifier
                         .border(
@@ -161,6 +177,42 @@ fun TodayWorkoutScreen(
                     )
                 }
             }
+        }
+
+        // 운동 정보 조회 중
+        if (isLoading && !isPreview) {
+            TodayWorkoutSkeleton(
+                modifier = Modifier.weight(1f)
+            )
+            return@Column
+        }
+
+        // 운동 정보 조회 실패
+        if (errorMessage != null && !isPreview) {
+            WorkoutErrorContent(
+                message = errorMessage,
+                onRetry = onRetry,
+                modifier = Modifier.weight(1f)
+            )
+            return@Column
+        }
+
+        // 주간 루틴이 없는 경우
+        if (hasNoWeeklyRoutine && !isPreview) {
+            EmptyRoutineContent(
+                modifier = Modifier.weight(1f),
+                onCreateRoutine = onCreateRoutine
+            )
+            return@Column
+        }
+
+        // 오늘이 휴식일인 경우
+        if (isRestDay && !isPreview) {
+            RestDayContent(
+                modifier = Modifier.weight(1f),
+                onViewWeeklyRoutine = onViewWeeklyRoutine
+            )
+            return@Column
         }
 
         // 운동 정보 및 리스트
@@ -322,6 +374,213 @@ private fun WorkoutStat(
             style = MaterialTheme.typography.bodySmall,
             color = TextSecondary
         )
+    }
+}
+
+
+// 오늘 운동이 없는 날
+@Composable
+private fun RestDayContent(
+    onViewWeeklyRoutine: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "오늘은 운동하는 날이 아니에요.",
+                style = fitMateTextStyle(12.sp, 18.sp),
+                color = TextSecondary,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(Spacing3))
+
+            FitMateCompactButton(
+                text = "이번 주 루틴 보기",
+                onClick = onViewWeeklyRoutine
+            )
+        }
+    }
+}
+
+@Composable
+private fun EmptyRoutineContent(
+    onCreateRoutine: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "생성된 루틴이 없어요.\n루틴을 생성하러 가볼까요?",
+                style = fitMateTextStyle(12.sp, 18.sp),
+                color = TextSecondary,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(Spacing3))
+
+            FitMateCompactButton(
+                text = "+ 루틴 생성하기",
+                onClick = onCreateRoutine
+            )
+        }
+    }
+}
+
+@Composable
+private fun WorkoutErrorContent(
+    message: String,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = message,
+                style = fitMateTextStyle(12.sp, 18.sp),
+                color = TextSecondary,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(Spacing3))
+
+            FitMateCompactButton(
+                text = "다시 시도",
+                onClick = onRetry
+            )
+        }
+    }
+}
+
+@Composable
+private fun TodayWorkoutSkeleton(
+    modifier: Modifier = Modifier
+) {
+    LazyColumn(
+        modifier = modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(
+            start = Spacing6,
+            end = Spacing6,
+            top = Spacing4,
+            bottom = Spacing3
+        ),
+        verticalArrangement = Arrangement.spacedBy(Spacing2)
+    ) {
+        // 운동 제목 및 날짜
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                FitMateSkeleton(
+                    modifier = Modifier
+                        .width(110.dp)
+                        .height(22.dp)
+                )
+
+                FitMateSkeleton(
+                    modifier = Modifier
+                        .width(80.dp)
+                        .height(16.dp)
+                )
+            }
+        }
+
+        // 운동 시간, 운동 개수, 운동 장소
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Spacing2)
+            ) {
+                repeat(3) {
+                    FitMateSkeleton(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(64.dp)
+                    )
+                }
+            }
+        }
+
+        item {
+            Spacer(
+                modifier = Modifier.height(Spacing2)
+            )
+        }
+
+        // 운동 목록
+        items(4) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = Spacing2),
+                horizontalArrangement = Arrangement.spacedBy(Spacing3),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // 운동 순서
+                FitMateSkeleton(
+                    modifier = Modifier
+                        .width(32.dp)
+                        .height(32.dp)
+                )
+
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    // 운동 이름
+                    FitMateSkeleton(
+                        modifier = Modifier
+                            .fillMaxWidth(0.6f)
+                            .height(18.dp)
+                    )
+
+                    // 중량, 횟수, 세트
+                    FitMateSkeleton(
+                        modifier = Modifier
+                            .fillMaxWidth(0.85f)
+                            .height(12.dp)
+                    )
+
+                    // 휴식 시간
+                    FitMateSkeleton(
+                        modifier = Modifier
+                            .fillMaxWidth(0.35f)
+                            .height(12.dp)
+                    )
+                }
+            }
+        }
+
+        // 운동 시작 버튼
+        item {
+            Spacer(
+                modifier = Modifier.height(Spacing2)
+            )
+
+            FitMateSkeleton(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(12.dp)
+            )
+        }
     }
 }
 
