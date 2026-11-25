@@ -173,3 +173,117 @@ data class WorkoutRecordExercise(
     val completedDurationSeconds: Int?,
     val calculatedDifficulty: String?
 )
+
+
+// ==================== 월별 운동 기록 ====================
+
+// 월별 운동 기록 및 집계 정보
+data class MonthlyWorkoutRecord(
+    val year: Int,
+    val month: Int,
+    val workoutCount: Int,
+    val totalExerciseSeconds: Long,
+    val workoutDates: List<java.time.LocalDate>,
+    val records: List<MonthlyWorkoutRecordItem>
+)
+
+// 개별 운동 기록 요약
+data class MonthlyWorkoutRecordItem(
+    val workoutRecordId: Long,
+    val date: java.time.LocalDate,
+    val mainTarget: String,
+    val actualExerciseSeconds: Long,
+    val completionRate: Double,
+    val maxHeartRate: Int?,
+    val exerciseNames: List<String>
+)
+
+// ==================== 성장 분석 ====================
+
+// 성장 분석 초기 데이터
+data class GrowthAnalysis(
+    val bodyComposition: BodyCompositionGrowth,
+    val workoutGrowth: WorkoutGrowth,
+    val attendance: AttendanceGrowth
+)
+
+// ==================== 신체 변화 ====================
+
+// 최근 신체 측정값 및 월별 기록
+data class BodyCompositionGrowth(
+    val latest: LatestBodyComposition?,
+    val monthlyRecords: List<MonthlyBodyComposition>
+)
+
+// 신체 지표별 최근 측정값
+data class LatestBodyComposition(
+    val bodyWeight: BodyCompositionMeasurement?,
+    val skeletalMuscleMass: BodyCompositionMeasurement?,
+    val bodyFatPercentage: BodyCompositionMeasurement?,
+    val bodyFatMass: BodyCompositionMeasurement?
+)
+
+// 개별 신체 지표 측정값
+data class BodyCompositionMeasurement(
+    val value: Double?,
+    val measuredDate: String?
+)
+
+// 월별 신체 기록
+data class MonthlyBodyComposition(
+    val year: Int,
+    val month: Int,
+    val bodyWeight: BodyCompositionRange?,
+    val skeletalMuscleMass: BodyCompositionRange?,
+    val bodyFatPercentage: BodyCompositionRange?,
+    val bodyFatMass: BodyCompositionRange?
+)
+
+// 월별 신체 지표 최대·최소
+data class BodyCompositionRange(
+    val max: Double?,
+    val min: Double?
+)
+
+// ==================== 운동 성장 ====================
+
+// 수행한 중량 운동 목록 및 선택 운동
+data class WorkoutGrowth(
+    val exercises: List<GrowthExercise>,
+    val selectedExercise: ExerciseGrowth?
+)
+
+// 성장 분석에서 선택 가능한 운동
+data class GrowthExercise(
+    val exerciseId: Long,
+    val exerciseName: String
+)
+
+// 선택 운동의 월별 중량 변화
+data class ExerciseGrowth(
+    val exerciseId: Long,
+    val exerciseName: String,
+    val monthlyRecords: List<MonthlyExerciseWeight>
+)
+
+// 월별 최대·최소 중량
+data class MonthlyExerciseWeight(
+    val year: Int,
+    val month: Int,
+    val maxWeight: Double?,
+    val minWeight: Double?
+)
+
+// ==================== 출석률 ====================
+
+// 월별 출석률 목록
+data class AttendanceGrowth(
+    val monthlyRecords: List<MonthlyAttendance>
+)
+
+// 개별 월의 출석률
+data class MonthlyAttendance(
+    val year: Int,
+    val month: Int,
+    val attendanceRate: Double?
+)

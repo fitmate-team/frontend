@@ -2,6 +2,7 @@ package com.fitmate.data.remote.dto
 
 import kotlinx.serialization.Serializable
 
+
 // ==================== 월별 운동 기록 ====================
 
 // 월별 운동 기록 조회 응답
@@ -11,7 +12,20 @@ data class MonthlyWorkoutRecordResponseDto(
     val year: Int = 0,
     val month: Int = 0,
     val workoutCount: Int = 0,
-    val totalExerciseSeconds: Long = 0L
+    val totalExerciseSeconds: Long = 0L,
+    val records: List<MonthlyWorkoutRecordItemDto> = emptyList()
+)
+
+// 개별 운동 기록 요약
+@Serializable
+data class MonthlyWorkoutRecordItemDto(
+    val workoutRecordId: Long,
+    val date: String,
+    val mainTarget: String,
+    val actualExerciseSeconds: Long,
+    val completionRate: Double,
+    val maxHeartRate: Int? = null,
+    val exerciseNames: List<String> = emptyList()
 )
 
 // ==================== 운동 기록 상세 ====================

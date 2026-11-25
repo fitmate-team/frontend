@@ -1,7 +1,6 @@
 package com.fitmate.presentation.record
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,69 +20,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.fitmate.presentation.designsystem.R
+import com.fitmate.presentation.designsystem.component.FitMateSkeleton
 import com.fitmate.presentation.designsystem.theme.*
 import java.time.LocalDate
 import java.time.YearMonth
-import com.fitmate.presentation.designsystem.R
+import java.time.ZoneId
+import kotlin.math.roundToInt
 
 // ========================================
-// 1. 운동 기록 더미 데이터
-// ========================================
-
-private data class WorkoutEntry(
-    val date: LocalDate,
-    val title: String,
-    val minutes: Int,
-    val completion: Int,
-    val heartRate: Int,
-    val exercises: String
-)
-
-private val sampleWorkouts = listOf(
-    WorkoutEntry(
-        LocalDate.of(2026, 9, 3),
-        "상체 PUSH", 55, 92, 128,
-        "벤치프레스 · 숄더프레스 · 체스트프레스"
-    ),
-    WorkoutEntry(
-        LocalDate.of(2026, 10, 8),
-        "하체", 60, 100, 135,
-        "스쿼트 · 레그프레스 · 레그컬"
-    ),
-    WorkoutEntry(
-        LocalDate.of(2026, 10, 12),
-        "상체 PULL", 48, 88, 124,
-        "랫풀다운 · 시티드로우 · 바벨로우"
-    ),
-    WorkoutEntry(
-        LocalDate.of(2026, 10, 17),
-        "상체 PUSH", 52, 95, 130,
-        "벤치프레스 · 숄더프레스"
-    ),
-    WorkoutEntry(
-        LocalDate.of(2026, 10, 20),
-        "유산소", 40, 100, 142,
-        "러닝머신 · 사이클"
-    ),
-    WorkoutEntry(
-        LocalDate.of(2026, 10, 24),
-        "하체", 65, 90, 133,
-        "스쿼트 · 런지 · 레그컬"
-    ),
-    WorkoutEntry(
-        LocalDate.of(2026, 10, 27),
-        "상체 PULL", 50, 94, 127,
-        "랫풀다운 · 데드리프트"
-    ),
-    WorkoutEntry(
-        LocalDate.of(2026, 10, 30),
-        "전신", 58, 98, 136,
-        "스쿼트 · 벤치프레스 · 플랭크"
-    )
-)
-
-// ========================================
-// 2. 공통 텍스트 스타일
+// 1. 공통 텍스트 스타일
 // ========================================
 
 internal fun recordStyle(
@@ -106,7 +52,7 @@ internal fun recordStyle(
 )
 
 // ========================================
-// 3. 월별 기록 / 성장 분석 탭
+// 2. 월별 기록 / 성장 분석 탭
 // ========================================
 
 @Composable
@@ -174,30 +120,43 @@ internal fun RecordTabs(
 }
 
 // ========================================
-// 4. 기록 메인 화면
+// 3. 기록 메인 화면
 // ========================================
 
 @Composable
 fun RecordScreen(
-    onOpenWorkoutDetail: (String) -> Unit = {}
+    onOpenWorkoutDetail: (Long) -> Unit = {},
+    viewModel: RecordViewModel
 ) {
+    val uiState by viewModel.uiState.collectAsState()
+
     var tab by remember {
         mutableIntStateOf(0)
     }
 
-    // 오늘 날짜 기준으로 캘린더 시작
-    val today = remember {
-        LocalDate.now()
-    }
+    val today = LocalDate.now(
+        ZoneId.of("Asia/Seoul")
+    )
 
-    var month by remember {
-        mutableStateOf(YearMonth.from(today))
-    }
+    val month = uiState.selectedMonth
 
-    // 날짜 필터링용
-    // 파란 동그라미 표시와는 별개
-    var chosen by remember {
+    // 날짜별 운동 기록 필터링
+    var chosen by remember(month) {
         mutableStateOf<LocalDate?>(null)
+    }
+
+    val monthlyRecord = uiState.monthlyRecord
+
+    // 기록 화면 진입 시 월별 기록 조회
+    LaunchedEffect(viewModel) {
+        viewModel.loadMonthlyRecords()
+    }
+
+    // 성장 분석 탭 진입 시 API 호출
+    LaunchedEffect(tab) {
+        if (tab == 1) {
+            viewModel.loadGrowthAnalysis()
+        }
     }
 
     Column(
@@ -237,8 +196,16 @@ fun RecordScreen(
         if (tab == 1) {
 
             // 성장 분석 화면
+            // 다음 단계에서 실제 API 데이터 연결
             GrowthAnalysisContent(
-                Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                uiState = uiState,
+                onExerciseSelected = viewModel::loadExerciseGrowth,
+                onRetry = {
+                    viewModel.loadGrowthAnalysis(
+                        forceRefresh = true
+                    )
+                }
             )
 
         } else {
@@ -256,27 +223,34 @@ fun RecordScreen(
                     Modifier.height(16.dp)
                 )
 
-                // 캘린더
+                // ============================
+                // 월별 캘린더
+                // ============================
+
                 CalendarCard(
                     month = month,
                     today = today,
-                    marked = sampleWorkouts
-                        .map { it.date }
-                        .toSet(),
+                    marked = monthlyRecord
+                        ?.workoutDates
+                        ?.toSet()
+                        .orEmpty(),
 
                     onPrevious = {
-                        month = month.minusMonths(1)
                         chosen = null
+                        viewModel.selectPreviousMonth()
                     },
 
                     onNext = {
-                        month = month.plusMonths(1)
-                        chosen = null
+                        if (month.isBefore(
+                                YearMonth.from(today)
+                            )
+                        ) {
+                            chosen = null
+                            viewModel.selectNextMonth()
+                        }
                     },
 
                     onDateClick = { date ->
-                        // 날짜 클릭 시 기록 필터링
-                        // 파란 동그라미는 변경하지 않음
                         chosen = if (chosen == date) {
                             null
                         } else {
@@ -289,192 +263,430 @@ fun RecordScreen(
                     Modifier.height(28.dp)
                 )
 
-                // 현재 보고 있는 달의 기록
-                val monthly = sampleWorkouts.filter {
-                    YearMonth.from(it.date) == month
-                }
+                // ============================
+                // 로딩 상태
+                // ============================
 
-                Text(
-                    text = "이번 달",
-                    style = recordStyle(14),
-                    color = Gray600
-                )
+                val isLoading =
+                    uiState.isMonthlyLoading ||
+                            (
+                                    monthlyRecord == null &&
+                                            uiState.monthlyErrorMessage == null
+                                    )
 
-                Spacer(
-                    Modifier.height(12.dp)
-                )
+                if (isLoading) {
 
-                Row(
-                    verticalAlignment = Alignment.Bottom
+                    MonthlyRecordSkeleton()
+
+                } else if (
+                    uiState.monthlyErrorMessage != null
                 ) {
 
+                    // ============================
+                    // 오류 상태
+                    // ============================
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 24.dp),
+                        horizontalAlignment =
+                            Alignment.CenterHorizontally
+                    ) {
+
+                        Text(
+                            text = uiState
+                                .monthlyErrorMessage
+                                .orEmpty(),
+                            style = recordStyle(13),
+                            color = Gray600,
+                            textAlign = TextAlign.Center
+                        )
+
+                        Spacer(
+                            Modifier.height(8.dp)
+                        )
+
+                        TextButton(
+                            onClick = {
+                                viewModel.loadMonthlyRecords()
+                            }
+                        ) {
+                            Text(
+                                text = "다시 시도",
+                                style = recordStyle(
+                                    size = 13,
+                                    bold = true
+                                ),
+                                color = Blue600
+                            )
+                        }
+                    }
+
+                } else if (monthlyRecord != null) {
+
+                    // ============================
+                    // 월별 운동 통계
+                    // ============================
+
+                    val monthly = monthlyRecord.records
+
                     Text(
-                        text = "${monthly.size}회",
-                        style = recordStyle(
-                            size = 30,
-                            bold = false,
-                            number = true
-                        ),
-                        color = Color.Black
+                        text = if (
+                            month == YearMonth.from(today)
+                        ) {
+                            "이번 달"
+                        } else {
+                            "${month.monthValue}월"
+                        },
+                        style = recordStyle(14),
+                        color = Gray600
                     )
 
                     Spacer(
-                        Modifier.width(12.dp)
+                        Modifier.height(12.dp)
                     )
 
-                    val totalMinutes = monthly.sumOf {
-                        it.minutes
+                    Row(
+                        verticalAlignment = Alignment.Bottom
+                    ) {
+
+                        Text(
+                            text = "${monthlyRecord.workoutCount}회",
+                            style = recordStyle(
+                                size = 30,
+                                bold = false,
+                                number = true
+                            ),
+                            color = Color.Black
+                        )
+
+                        Spacer(
+                            Modifier.width(12.dp)
+                        )
+
+                        val totalMinutes =
+                            monthlyRecord.totalExerciseSeconds / 60L
+
+                        Text(
+                            text = "운동 총 ${totalMinutes / 60}시간 ${totalMinutes % 60}분",
+                            style = recordStyle(12),
+                            color = Gray600,
+                            modifier = Modifier.padding(
+                                bottom = 5.dp
+                            )
+                        )
                     }
 
-                    Text(
-                        text = "운동 총 ${totalMinutes / 60}시간 ${totalMinutes % 60}분",
-                        style = recordStyle(12),
-                        color = Gray600,
-                        modifier = Modifier.padding(
-                            bottom = 5.dp
-                        )
+                    Spacer(
+                        Modifier.height(30.dp)
                     )
-                }
 
-                Spacer(
-                    Modifier.height(30.dp)
-                )
+                    // ============================
+                    // 날짜별 운동 기록 필터링
+                    // ============================
 
-                // 날짜별 운동 기록 필터링
-                val filtered = monthly
-                    .filter {
+                    val filtered = monthly.filter {
                         chosen == null ||
                                 it.date == chosen
                     }
-                    .sortedByDescending {
-                        it.date
-                    }
 
-                if (filtered.isEmpty()) {
-                    Text(
-                        text = "선택한 날짜에 운동 기록이 없어요.",
-                        style = recordStyle(13),
-                        color = Gray500,
-                        modifier = Modifier.padding(
-                            vertical = 24.dp
-                        )
-                    )
-                }
+                    // 서버에서 최신순으로 반환하므로
+                    // 기존 응답 순서를 유지
 
-                // 운동 기록 아이템
-                filtered.forEach { workout ->
+                    if (filtered.isEmpty()) {
 
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(86.dp)
-                            .clickable {
-                                onOpenWorkoutDetail(
-                                    "${workout.date.monthValue}월 ${workout.date.dayOfMonth}일 운동"
-                                )
+                        Text(
+                            text = if (chosen == null) {
+                                "이번 달 운동 기록이 없어요."
+                            } else {
+                                "선택한 날짜에 운동 기록이 없어요."
                             },
-                        horizontalArrangement =
-                            Arrangement.spacedBy(12.dp)
-                    ) {
-
-                        // 왼쪽 타임라인
-                        Column(
-                            horizontalAlignment =
-                                Alignment.CenterHorizontally
-                        ) {
-
-                            // 파란 동그라미
-                            Box(
-                                modifier = Modifier
-                                    .padding(top = 5.dp)
-                                    .size(8.dp)
-                                    .background(
-                                        Blue600,
-                                        CircleShape
-                                    )
+                            style = recordStyle(13),
+                            color = Gray500,
+                            modifier = Modifier.padding(
+                                vertical = 24.dp
                             )
-
-                            // 동그라미와 선 간격
-                            Spacer(
-                                Modifier.height(3.5.dp)
-                            )
-
-                            // 마지막 아이템도 선 표시
-                            Box(
-                                modifier = Modifier
-                                    .width(1.dp)
-                                    .height(68.5.dp)
-                                    .background(Gray200)
-                            )
-                        }
-
-                        // 운동 정보
-                        Column(
-                            modifier = Modifier.weight(1f)
-                        ) {
-
-                            Text(
-                                text = "${workout.date.monthValue}월 ${workout.date.dayOfMonth}일",
-                                style = recordStyle(13),
-                                color = Gray600
-                            )
-
-                            Spacer(
-                                Modifier.height(8.dp)
-                            )
-
-                            Text(
-                                text = workout.title,
-                                style = recordStyle(
-                                    size = 16,
-                                    bold = false,
-                                    number = true
-                                ),
-                                color = Color.Black
-                            )
-
-                            Spacer(
-                                Modifier.height(4.dp)
-                            )
-
-                            Text(
-                                text = "${workout.minutes}분 · 수행률 ${workout.completion}% · 평균 심박 ${workout.heartRate}bpm",
-                                style = recordStyle(12),
-                                color = Gray600
-                            )
-
-                            Spacer(
-                                Modifier.height(6.dp)
-                            )
-
-                            Text(
-                                text = workout.exercises,
-                                style = recordStyle(12),
-                                color = Gray600,
-                                maxLines = 1
-                            )
-                        }
-
-                        // 운동 기록 상세 이동 아이콘
-                        Icon(
-                            painter = painterResource(
-                                id = R.drawable.ic_record_arrow_right
-                            ),
-                            contentDescription = "운동 기록 상세 보기",
-                            tint = Color.Unspecified,
-                            modifier = Modifier.size(10.dp)
                         )
                     }
 
-                    Spacer(
-                        Modifier.height(26.dp)
-                    )
+                    // ============================
+                    // 운동 기록 목록
+                    // ============================
+
+                    filtered.forEach { workout ->
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(86.dp)
+                                .clickable {
+                                    onOpenWorkoutDetail(
+                                        workout.workoutRecordId
+                                    )
+                                },
+                            horizontalArrangement =
+                                Arrangement.spacedBy(12.dp)
+                        ) {
+
+                            // 왼쪽 타임라인
+                            Column(
+                                horizontalAlignment =
+                                    Alignment.CenterHorizontally
+                            ) {
+
+                                // 파란 동그라미
+                                Box(
+                                    modifier = Modifier
+                                        .padding(top = 5.dp)
+                                        .size(8.dp)
+                                        .background(
+                                            Blue600,
+                                            CircleShape
+                                        )
+                                )
+
+                                Spacer(
+                                    Modifier.height(3.5.dp)
+                                )
+
+                                // 타임라인 세로선
+                                Box(
+                                    modifier = Modifier
+                                        .width(1.dp)
+                                        .height(68.5.dp)
+                                        .background(Gray200)
+                                )
+                            }
+
+                            // 운동 정보
+                            Column(
+                                modifier = Modifier.weight(1f)
+                            ) {
+
+                                // 운동 날짜
+                                Text(
+                                    text = "${workout.date.monthValue}월 ${workout.date.dayOfMonth}일",
+                                    style = recordStyle(13),
+                                    color = Gray600
+                                )
+
+                                Spacer(
+                                    Modifier.height(8.dp)
+                                )
+
+                                // 주요 운동 부위
+                                Text(
+                                    text = workout.mainTarget,
+                                    style = recordStyle(
+                                        size = 16,
+                                        bold = false,
+                                        number = true
+                                    ),
+                                    color = Color.Black
+                                )
+
+                                Spacer(
+                                    Modifier.height(4.dp)
+                                )
+
+                                // 실제 운동 시간 및 수행률
+                                Text(
+                                    text = buildString {
+
+                                        val minutes =
+                                            workout.actualExerciseSeconds / 60L
+
+                                        val seconds =
+                                            workout.actualExerciseSeconds % 60L
+
+                                        if (minutes == 0L) {
+                                            append("${seconds}초")
+                                        } else {
+                                            append("${minutes}분")
+                                        }
+
+                                        append(
+                                            " · 수행률 ${workout.completionRate.roundToInt()}%"
+                                        )
+
+                                        workout.maxHeartRate?.let {
+                                                heartRate ->
+
+                                            append(
+                                                " · 최대 심박 ${heartRate}bpm"
+                                            )
+                                        }
+                                    },
+                                    style = recordStyle(12),
+                                    color = Gray600
+                                )
+
+                                Spacer(
+                                    Modifier.height(6.dp)
+                                )
+
+                                // 실제 수행 운동 목록
+                                Text(
+                                    text = workout.exerciseNames
+                                        .joinToString(" · "),
+                                    style = recordStyle(12),
+                                    color = Gray600,
+                                    maxLines = 1
+                                )
+                            }
+
+                            // 운동 기록 상세 이동 아이콘
+                            Icon(
+                                painter = painterResource(
+                                    id = R.drawable.ic_record_arrow_right
+                                ),
+                                contentDescription =
+                                    "운동 기록 상세 보기",
+                                tint = Color.Unspecified,
+                                modifier = Modifier.size(10.dp)
+                            )
+                        }
+
+                        Spacer(
+                            Modifier.height(26.dp)
+                        )
+                    }
                 }
 
                 Spacer(
                     Modifier.height(23.dp)
                 )
             }
+        }
+    }
+}
+
+// ========================================
+// 4. 월별 기록 스켈레톤
+// ========================================
+
+@Composable
+private fun MonthlyRecordSkeleton() {
+
+    Column(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+
+        // 이번 달 텍스트 영역
+        FitMateSkeleton(
+            modifier = Modifier
+                .width(55.dp)
+                .height(18.dp)
+        )
+
+        Spacer(
+            Modifier.height(12.dp)
+        )
+
+        // 월별 운동 횟수 및 시간
+        Row(
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement =
+                Arrangement.spacedBy(12.dp)
+        ) {
+
+            FitMateSkeleton(
+                modifier = Modifier
+                    .width(65.dp)
+                    .height(38.dp)
+            )
+
+            FitMateSkeleton(
+                modifier = Modifier
+                    .width(145.dp)
+                    .height(18.dp)
+            )
+        }
+
+        Spacer(
+            Modifier.height(30.dp)
+        )
+
+        // 운동 기록 목록 스켈레톤
+        repeat(3) {
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(86.dp),
+                horizontalArrangement =
+                    Arrangement.spacedBy(12.dp)
+            ) {
+
+                Column(
+                    horizontalAlignment =
+                        Alignment.CenterHorizontally
+                ) {
+
+                    FitMateSkeleton(
+                        modifier = Modifier
+                            .padding(top = 5.dp)
+                            .size(8.dp)
+                    )
+
+                    Spacer(
+                        Modifier.height(3.5.dp)
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .height(68.5.dp)
+                            .background(Gray200)
+                    )
+                }
+
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+
+                    FitMateSkeleton(
+                        modifier = Modifier
+                            .width(85.dp)
+                            .height(15.dp)
+                    )
+
+                    Spacer(
+                        Modifier.height(8.dp)
+                    )
+
+                    FitMateSkeleton(
+                        modifier = Modifier
+                            .width(100.dp)
+                            .height(20.dp)
+                    )
+
+                    Spacer(
+                        Modifier.height(4.dp)
+                    )
+
+                    FitMateSkeleton(
+                        modifier = Modifier
+                            .fillMaxWidth(0.8f)
+                            .height(14.dp)
+                    )
+
+                    Spacer(
+                        Modifier.height(6.dp)
+                    )
+
+                    FitMateSkeleton(
+                        modifier = Modifier
+                            .fillMaxWidth(0.9f)
+                            .height(14.dp)
+                    )
+                }
+            }
+
+            Spacer(
+                Modifier.height(26.dp)
+            )
         }
     }
 }
@@ -492,6 +704,10 @@ private fun CalendarCard(
     onNext: () -> Unit,
     onDateClick: (LocalDate) -> Unit
 ) {
+
+    val canGoNext =
+        month.isBefore(YearMonth.from(today))
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -518,7 +734,8 @@ private fun CalendarCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement =
                     Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment =
+                    Alignment.CenterVertically
             ) {
 
                 // 이전 달 아이콘
@@ -562,7 +779,9 @@ private fun CalendarCard(
                             width = 35.dp,
                             height = 35.dp
                         )
-                        .clickable {
+                        .clickable(
+                            enabled = canGoNext
+                        ) {
                             onNext()
                         },
                     contentAlignment = Alignment.Center
@@ -572,7 +791,11 @@ private fun CalendarCard(
                             id = R.drawable.ic_record_chevron_right
                         ),
                         contentDescription = "다음 달",
-                        tint = Color.Unspecified,
+                        tint = if (canGoNext) {
+                            Color.Unspecified
+                        } else {
+                            Gray200
+                        },
                         modifier = Modifier.size(
                             width = 10.dp,
                             height = 10.dp
@@ -663,7 +886,8 @@ private fun CalendarCard(
                                         },
                                         shape = CircleShape
                                     ),
-                                contentAlignment = Alignment.Center
+                                contentAlignment =
+                                    Alignment.Center
                             ) {
 
                                 if (date != null) {
@@ -680,7 +904,7 @@ private fun CalendarCard(
                                 }
                             }
 
-                            // 운동 완료 날짜 표시
+                            // 실제 운동 완료 날짜 표시
                             if (
                                 date != null &&
                                 date in marked
@@ -698,9 +922,7 @@ private fun CalendarCard(
                         }
                     }
                 }
-
             }
-
         }
     }
 }
