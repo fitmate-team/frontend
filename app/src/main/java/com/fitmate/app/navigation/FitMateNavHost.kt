@@ -106,7 +106,6 @@ import com.fitmate.presentation.workout.setup.WorkoutExerciseSettingScreen
 import com.fitmate.presentation.workout.session.WorkoutProgressScreen
 import com.fitmate.presentation.workout.setup.WorkoutWeightSettingScreen
 import com.fitmate.presentation.workout.result.WorkoutAnalysisScreen
-import com.fitmate.presentation.workout.result.WorkoutAnalysisItem
 import com.fitmate.presentation.workout.setup.WorkoutTimeChangeScreen
 
 import com.fitmate.presentation.mypage.BodyProfileEditScreen
@@ -117,6 +116,7 @@ import com.fitmate.presentation.mypage.GymInfo
 import com.fitmate.presentation.mypage.OutdoorEquipmentEditScreen
 import com.fitmate.presentation.mypage.initialGymList
 
+//workout
 import com.fitmate.presentation.workout.today.WorkoutViewModel
 import com.fitmate.presentation.workout.today.toUiState
 import com.fitmate.presentation.workout.session.WorkoutSessionViewModel
@@ -136,6 +136,11 @@ import com.fitmate.presentation.workout.recommendatio.WorkoutChange
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+
+//recod
+import com.fitmate.presentation.record.RecordViewModel
+import com.fitmate.presentation.workout.result.toAnalysisItems
+
 import java.time.Instant
 
 
@@ -163,10 +168,6 @@ fun FitMateNavHost() {
     // 루틴 탭에서 연 요일 상세 (요일 문구)
     var routineDetailDayLabel by remember { mutableStateOf("월") }
     var mypageEquipmentEditTitle by remember { mutableStateOf("홈트 기구 편집") }
-
-    var selectedWorkoutTitle by remember {
-        mutableStateOf("")
-    }
 
 
     var selectedWorkoutMinutes by remember {
@@ -1525,54 +1526,123 @@ fun FitMateNavHost() {
             }
 
 
+            // ========================================
+// 기록 및 성장 분석 화면
+// ========================================
             composable(Route.RECORD) {
+
+                val viewModel: RecordViewModel = hiltViewModel()
+
                 RecordScreen(
-                    onOpenWorkoutDetail = { title ->
-                        selectedWorkoutTitle = title
-                        navController.navigate(Route.RECORD_WORKOUT_ANALYSIS)
+                    viewModel = viewModel,
+
+                    onOpenWorkoutDetail = { workoutRecordId ->
+
+                        navController.navigate(
+                            "${Route.RECORD_WORKOUT_ANALYSIS}/$workoutRecordId"
+                        ) {
+                            launchSingleTop = true
+                        }
                     }
                 )
             }
 
-            composable(Route.RECORD_WORKOUT_ANALYSIS) {
+// ========================================
+// 운동 기록 상세 분석 화면
+// ========================================
+            composable(
+                route = "${Route.RECORD_WORKOUT_ANALYSIS}/{workoutRecordId}",
+
+                arguments = listOf(
+                    navArgument("workoutRecordId") {
+                        type = NavType.LongType
+                    }
+                )
+
+            ) { backStackEntry ->
+
+                // 선택한 운동 기록 ID
+                val workoutRecordId = requireNotNull(
+                    backStackEntry.arguments
+                ).getLong("workoutRecordId")
+
+                // 기존 운동 분석 ViewModel 재사용
+                val viewModel: WorkoutAnalysisViewModel =
+                    hiltViewModel(backStackEntry)
+
+                val uiState by viewModel.uiState
+                    .collectAsStateWithLifecycle()
+
+                // 운동 기록 상세 조회
+                LaunchedEffect(workoutRecordId) {
+
+                    viewModel.loadWorkoutAnalysis(
+                        workoutRecordId
+                    )
+                }
+
+                val analysis = uiState.analysis
+
                 WorkoutAnalysisScreen(
-                    items = listOf(
-                        WorkoutAnalysisItem(
-                            name = "벤치프레스",
-                            weightKg = 30,
-                            reps = 12,
-                            totalSets = 3,
-                            completedSets = 3,
-                            difficulty = "적당함"
-                        ),
-                        WorkoutAnalysisItem(
-                            name = "숄더프레스",
-                            weightKg = 15,
-                            reps = 12,
-                            totalSets = 3,
-                            completedSets = 2,
-                            difficulty = "어려움"
-                        ),
-                        WorkoutAnalysisItem(
-                            name = "체스트프레스",
-                            weightKg = 20,
-                            reps = 12,
-                            totalSets = 3,
-                            completedSets = 3,
-                            difficulty = "쉬움"
-                        )
-                    ),
-                    totalSeconds = 3300L,
-                    restSeconds = 600L,
+
+                    // 실제 수행한 운동 목록
+                    items = analysis
+                        ?.toAnalysisItems()
+                        .orEmpty(),
+
+                    // 실제 운동 시간
+                    totalSeconds =
+                        analysis?.actualExerciseSeconds ?: 0L,
+
+                    // 실제 휴식 시간
+                    restSeconds =
+                        analysis?.actualRestSeconds,
+
+                    // 최소 및 최대 심박수
+                    minHeartRate =
+                        analysis?.minHeartRate,
+
+                    maxHeartRate =
+                        analysis?.maxHeartRate,
+
+                    // 실제 운동 달성률
+                    completionRate =
+                        analysis?.completionRate,
+
+                    // 과거 기록 조회에서는 AI 강도 조정 미진행
                     hasNextRoutine = false,
+
+                    // 조회 중 스켈레톤 표시
+                    isLoading =
+                        uiState.analysisErrorMessage == null &&
+                                (
+                                        uiState.isAnalysisLoading ||
+                                                analysis == null
+                                        ),
+
+                    // API 조회 오류
+                    errorMessage =
+                        uiState.analysisErrorMessage,
+
+                    // 조회 실패 시 재시도
+                    onRetry = {
+                        viewModel.loadWorkoutAnalysis(
+                            workoutRecordId
+                        )
+                    },
+
+                    // 이전 기록 화면으로 이동
                     onBack = {
                         navController.popBackStack()
                     },
+
+                    // 확인 버튼 클릭 시 기록 화면으로 이동
                     onNext = {
                         navController.popBackStack()
                     }
                 )
             }
+
 
 
 
