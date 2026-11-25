@@ -14,8 +14,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -24,6 +25,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraphBuilder
@@ -118,15 +120,23 @@ import com.fitmate.presentation.mypage.initialGymList
 import com.fitmate.presentation.workout.today.WorkoutViewModel
 import com.fitmate.presentation.workout.today.toUiState
 import com.fitmate.presentation.workout.session.WorkoutSessionViewModel
+import com.fitmate.presentation.workout.result.WorkoutAnalysisViewModel
 import com.fitmate.presentation.workout.session.WorkoutSessionResult
 import com.fitmate.domain.model.FinishWorkout
+import com.fitmate.domain.model.FinishWorkoutExercise
 import com.fitmate.presentation.workout.session.WorkoutProgressExercise
 import com.fitmate.presentation.workout.setup.ExerciseSetting
 import com.fitmate.domain.model.WorkoutExercise
 import com.fitmate.domain.model.ApplyWorkoutAdjustments
 import com.fitmate.domain.model.ApplyWorkoutAdjustmentExercise
+import com.fitmate.presentation.workout.today.WorkoutTodayUiState
+import com.fitmate.presentation.workout.today.TodayExercise
+import com.fitmate.presentation.designsystem.component.FitMateDialog
+import com.fitmate.presentation.workout.recommendatio.WorkoutChange
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.time.Instant
-
 
 
 private const val WORKOUT_PROGRESS_WITH_ID =
@@ -158,14 +168,13 @@ fun FitMateNavHost() {
         mutableStateOf("")
     }
 
+
     var selectedWorkoutMinutes by remember {
-        mutableIntStateOf(20)}
+        mutableIntStateOf(20)
+    }
 
     var configuredWorkoutExercises by remember {
         mutableStateOf<List<ExerciseSetting>>(emptyList())
-    }
-
-        mutableIntStateOf(20)
     }
 
     // 마이페이지
@@ -270,7 +279,8 @@ fun FitMateNavHost() {
 
             // 루틴 탭 위에 열리는 요일 상세. 루틴 탭의 RoutineViewModel을 같이 쓴다
             composable(Route.ROUTINE_WORKOUT_DETAIL) { entry ->
-                val routineEntry = remember(entry) { navController.getBackStackEntry(Route.ROUTINE) }
+                val routineEntry =
+                    remember(entry) { navController.getBackStackEntry(Route.ROUTINE) }
                 val viewModel: RoutineViewModel = hiltViewModel(routineEntry)
                 val state by viewModel.uiState.collectAsStateWithLifecycle()
                 state.dayDetails[routineDetailDayLabel]?.let { detail ->
@@ -394,12 +404,18 @@ fun FitMateNavHost() {
             }
 
 
-
             // 오늘의 운동
             composable(Route.WORKOUT) {
 
                 val viewModel: WorkoutViewModel = hiltViewModel()
                 val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+
+                // 운동 탭에 진입할 때마다 최신 운동 루틴 조회
+                LaunchedEffect(viewModel) {
+                    viewModel.loadTodayWorkout()
+                }
+
 
 
                 LaunchedEffect(uiState.workoutRecordId) {
@@ -419,33 +435,38 @@ fun FitMateNavHost() {
 
                 when {
                     uiState.isLoading -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
-                        }
+                        TodayWorkoutScreen(
+                            isLoading = true
+                        )
                     }
 
-                    uiState.errorMessage != null -> {
-                        Column(
-                            modifier = Modifier.fillMaxSize(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Text(
-                                text = uiState.errorMessage
-                                    ?: "운동 정보를 불러오지 못했어요."
-                            )
-
-                            Button(
-                                onClick = viewModel::loadTodayWorkout
-                            ) {
-                                Text("다시 시도")
+                    // 이번 주 루틴이 없는 경우
+                    uiState.hasNoWeeklyRoutine -> {
+                        TodayWorkoutScreen(
+                            hasNoWeeklyRoutine = true,
+                            onCreateRoutine = {
+                                navController.navigateToTab(Route.ROUTINE)
                             }
-                        }
+                        )
                     }
 
+                    // 오늘이 휴식일인 경우
+                    uiState.isRestDay -> {
+                        TodayWorkoutScreen(
+                            isRestDay = true,
+                            onViewWeeklyRoutine = {
+                                navController.navigateToTab(Route.ROUTINE)
+                            }
+                        )
+                    }
+
+                    // 운동 정보 조회 실패
+                    uiState.errorMessage != null -> {
+                        TodayWorkoutScreen(
+                            errorMessage = uiState.errorMessage,
+                            onRetry = viewModel::loadTodayWorkout
+                        )
+                    }
 
                     uiState.workout != null -> {
                         Box(
@@ -453,6 +474,10 @@ fun FitMateNavHost() {
                         ) {
                             TodayWorkoutScreen(
                                 state = uiState.workout!!.toUiState(),
+
+                                onViewWeeklyRoutine = {
+                                    navController.navigateToTab(Route.ROUTINE)
+                                },
 
                                 onChangeLocation = {
                                     navController.navigate("workout_time_change")
@@ -469,37 +494,15 @@ fun FitMateNavHost() {
                                 }
                             )
 
-                            // 운동 시작 API 호출 중 로딩
-                            if (uiState.isStarting) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(
-                                            Color.White.copy(alpha = 0.7f)
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    CircularProgressIndicator()
-                                }
-                            }
 
                             // 운동 시작 실패 시 오류 표시
                             uiState.startErrorMessage?.let { message ->
-                                AlertDialog(
-                                    onDismissRequest = viewModel::clearStartError,
-                                    title = {
-                                        Text("운동 시작 실패")
-                                    },
-                                    text = {
-                                        Text(message)
-                                    },
-                                    confirmButton = {
-                                        TextButton(
-                                            onClick = viewModel::clearStartError
-                                        ) {
-                                            Text("확인")
-                                        }
-                                    }
+                                FitMateDialog(
+                                    title = "운동 시작 실패",
+                                    message = message,
+                                    showDismissButton = false,
+                                    onConfirm = viewModel::clearStartError,
+                                    onDismiss = viewModel::clearStartError
                                 )
                             }
                         }
@@ -507,12 +510,9 @@ fun FitMateNavHost() {
 
 
                     else -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
-                        }
+                        TodayWorkoutScreen(
+                            isLoading = true
+                        )
                     }
                 }
             }
@@ -571,32 +571,6 @@ fun FitMateNavHost() {
                     it.gymName
                 }
 
-                var pendingEnvironmentId by remember {
-                    mutableStateOf<Long?>(null)
-                }
-
-                var showRerecommendationDialog by remember {
-                    mutableStateOf(false)
-                }
-
-                LaunchedEffect(uiState.locationValidation) {
-                    val validation = uiState.locationValidation ?: return@LaunchedEffect
-                    val environmentId = pendingEnvironmentId ?: return@LaunchedEffect
-
-                    if (validation.workoutEnvironmentId != environmentId) {
-                        return@LaunchedEffect
-                    }
-
-                    if (validation.requiresRerecommendation) {
-                        showRerecommendationDialog = true
-                        viewModel.clearLocationValidation()
-                        pendingEnvironmentId = null
-                    } else {
-                        viewModel.clearLocationValidation()
-                        pendingEnvironmentId = null
-                        viewModel.updateWorkoutLocation(environmentId)
-                    }
-                }
 
 
 
@@ -629,105 +603,42 @@ fun FitMateNavHost() {
 
                         if (selectedEnvironment != null) {
                             if (selectedEnvironment.id == currentEnvironmentId) {
+                                // 같은 장소라면 API 호출 없이 이전 화면으로 이동
                                 navController.popBackStack()
                             } else {
-                                pendingEnvironmentId = selectedEnvironment.id
-                                viewModel.validateWorkoutLocation(
-                                    selectedEnvironment.id
+                                // 다른 장소라면 서버에서 재추천 필요 여부 검사
+                                viewModel.updateWorkoutLocation(selectedEnvironment.id)
+
+                                navController.navigate(
+                                    Route.WORKOUT_RECOMMENDATION_LOADING
                                 )
                             }
                         }
                     }
                 )
 
-                if (uiState.isLocationLoading || uiState.isLocationSaving) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.White.copy(alpha = 0.7f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                }
+
 
                 uiState.locationErrorMessage?.let { message ->
-                    AlertDialog(
-                        onDismissRequest = viewModel::clearLocationError,
-                        title = { Text("운동 장소 변경 실패") },
-                        text = { Text(message) },
-                        confirmButton = {
-                            TextButton(onClick = viewModel::clearLocationError) {
-                                Text("확인")
-                            }
-                        }
+                    FitMateDialog(
+                        title = "운동 장소 변경 실패",
+                        message = message,
+                        showDismissButton = false,
+                        onConfirm = viewModel::clearLocationError,
+                        onDismiss = viewModel::clearLocationError
                     )
                 }
-
-
-                if (showRerecommendationDialog) {
-                    AlertDialog(
-                        onDismissRequest = {
-                            showRerecommendationDialog = false
-                        },
-                        title = {
-                            Text("운동 루틴 조정 필요")
-                        },
-                        text = {
-                            Text(
-                                "선택한 장소에서는 기존 운동 루틴을 " +
-                                        "그대로 수행하기 어려울 수 있어요. " +
-                                        "운동 루틴 재추천 기능이 연결된 후 변경할 수 있어요."
-                            )
-                        },
-                        confirmButton = {
-                            TextButton(
-                                onClick = {
-                                    showRerecommendationDialog = false
-                                }
-                            ) {
-                                Text("확인")
-                            }
-                        }
-                    )
-                }
-
             }
 
 
-            composable(Route.WORKOUT_RECOMMENDATION_LOADING) {
-                WorkoutRecommendationLoadingScreen(
-                    onComplete = {
-                        navController.navigate(Route.WORKOUT_RECOMMENDATION) {
-                            popUpTo(Route.WORKOUT_RECOMMENDATION_LOADING) {
-                                inclusive = true
-                            }
-                        }
-                    }
-                )
-            }
-
-            composable(Route.WORKOUT_RECOMMENDATION) {
-                WorkoutRecommendationScreen(
-                    onBack = {
-                        navController.popBackStack()
-                    },
-                    onPreviewClick = {
-                        navController.navigate(Route.WORKOUT_PREVIEW)
-                    },
-                    onStartWorkout = {
-                        navController.navigate(Route.WORKOUT_PROGRESS)
-                    },
-                    onEditClick = {
-                        navController.navigate(Route.WORKOUT_EXERCISE_SELECT)
-                    }
-                )
-            }
 
 
-            composable(Route.WORKOUT_PREVIEW) { backStackEntry ->
 
-                // 오늘의 운동 화면과 동일한 ViewModel 공유
+
+
+
+            composable(Route.WORKOUT_RECOMMENDATION_LOADING) { backStackEntry ->
+
                 val workoutEntry = remember(backStackEntry) {
                     navController.getBackStackEntry(Route.WORKOUT)
                 }
@@ -735,107 +646,238 @@ fun FitMateNavHost() {
                 val viewModel: WorkoutViewModel = hiltViewModel(workoutEntry)
                 val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-                LaunchedEffect(uiState.workoutRecordId) {
-                    val recordId = uiState.workoutRecordId
-                    val dailyRoutineId = uiState.workout?.dailyRoutineId
 
-                    if (recordId != null && dailyRoutineId != null) {
-                        navController.navigate(
-                            "workout_progress/$recordId/$dailyRoutineId"
-                        ) {
-                            launchSingleTop = true
+                if (uiState.showLocationChangedDialog) {
+                    FitMateDialog(
+                        title = "운동 장소가 변경되었어요!",
+                        message = "현재 운동 루틴은 변경한 장소에서도 진행할 수 있어요.\n" +
+                                "AI 재추천 없이 기존 루틴을 유지할게요.",
+                        confirmText = "확인",
+                        showDismissButton = false,
+                        onConfirm = {
+                            viewModel.confirmLocationChanged()
+                        },
+                        onDismiss = {}
+                    )
+                }
+
+                LaunchedEffect(
+                    uiState.isRerecommendationReady,
+                    uiState.isLocationUpdated
+                ) {
+                    when {
+                        uiState.isRerecommendationReady -> {
+                            navController.navigate(Route.WORKOUT_RECOMMENDATION) {
+                                popUpTo(Route.WORKOUT_RECOMMENDATION_LOADING) {
+                                    inclusive = true
+                                }
+                            }
+                        }
+
+                        uiState.isLocationUpdated -> {
+                            viewModel.clearLocationUpdated()
+                            navController.popBackStack(
+                                Route.WORKOUT,
+                                inclusive = false
+                            )
                         }
                     }
                 }
 
-                when {
-                    // 운동 정보 로딩 중
-                    uiState.isLoading -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
+                Box(modifier = Modifier.fillMaxSize()) {
+                    WorkoutRecommendationLoadingScreen(
+                        onComplete = {}
+                    )
+
+                    uiState.locationErrorMessage?.let { message ->
+                        val closeError = {
+                            viewModel.clearLocationError()
+                            navController.popBackStack()
+                            Unit
                         }
+
+                        FitMateDialog(
+                            title = "운동 루틴 재추천 실패",
+                            message = message,
+                            showDismissButton = false,
+                            onConfirm = closeError,
+                            onDismiss = closeError
+                        )
                     }
+                }
+            }
 
-                    // 운동 정보 조회 실패
-                    uiState.errorMessage != null -> {
-                        Column(
-                            modifier = Modifier.fillMaxSize(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Text(
-                                text = uiState.errorMessage
-                                    ?: "운동 정보를 불러오지 못했어요."
-                            )
+            composable(Route.WORKOUT_RECOMMENDATION) { backStackEntry ->
 
-                            Button(
-                                onClick = viewModel::loadTodayWorkout
-                            ) {
-                                Text("다시 시도")
-                            }
-                        }
+                val workoutEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry(Route.WORKOUT)
+                }
+
+                val viewModel: WorkoutViewModel = hiltViewModel(workoutEntry)
+                val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+
+                // 추천 루틴 저장 성공 시 오늘의 운동으로 이동
+                LaunchedEffect(uiState.isLocationUpdated) {
+                    if (uiState.isLocationUpdated) {
+                        viewModel.clearLocationUpdated()
+
+                        navController.popBackStack(
+                            Route.WORKOUT,
+                            inclusive = false
+                        )
                     }
+                }
 
-                    // 서버에서 조회한 실제 운동 정보 표시
-                    uiState.workout != null -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            TodayWorkoutScreen(
-                                state = uiState.workout!!.toUiState(),
+                Box(modifier = Modifier.fillMaxSize()) {
 
-                                onChangeLocation = {
-                                    navController.navigate("workout_time_change")
-                                },
+                    WorkoutRecommendationScreen(
 
-                                onWeightSettingClick = {
-                                    navController.navigate(
-                                        Route.WORKOUT_WEIGHT_SETTING
-                                    )
-                                },
 
-                                onStartWorkout = {
-                                    viewModel.startWorkout()
-                                }
-                            )
+                        workoutChanges = uiState.dailyRecommendation
+                            ?.replacements
+                            ?.map { replacement ->
+                                val originalCode = replacement.originalExerciseCode
+                                val newCode = replacement.replacementExercise.exerciseCode
 
-                            // 운동 시작 API 로딩
-                            if (uiState.isStarting) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(
-                                            Color.White.copy(alpha = 0.7f)
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    CircularProgressIndicator()
-                                }
+                                val originalName = uiState.originalWorkoutExercises
+                                    .firstOrNull { it.exerciseCode == originalCode }
+                                    ?.exerciseName
+                                    ?: uiState.exerciseCatalog
+                                        .firstOrNull { it.exerciseCode == originalCode }
+                                        ?.nameKo
+                                    ?: originalCode
+
+                                val newName = uiState.exerciseCatalog
+                                    .firstOrNull { it.exerciseCode == newCode }
+                                    ?.nameKo
+                                    ?: newCode
+
+                                WorkoutChange(
+                                    previousExercise = originalName,
+                                    newExercise = newName
+                                )
                             }
+                            .orEmpty(),
 
-                            // 운동 시작 실패
-                            uiState.startErrorMessage?.let { message ->
-                                AlertDialog(
-                                    onDismissRequest = viewModel::clearStartError,
-                                    title = {
-                                        Text("운동 시작 실패")
-                                    },
-                                    text = {
-                                        Text(message)
-                                    },
-                                    confirmButton = {
-                                        TextButton(
-                                            onClick = viewModel::clearStartError
-                                        ) {
-                                            Text("확인")
-                                        }
-                                    }
+
+                        onBack = {
+                            if (!uiState.isLocationSaving) {
+                                navController.popBackStack()
+                            }
+                        },
+
+                        onPreviewClick = {
+                            navController.navigate(Route.WORKOUT_PREVIEW)
+                        },
+
+                        onStartWorkout = {
+                            if (!uiState.isLocationSaving) {
+                                viewModel.saveRecommendedRoutine()
+                            }
+                        },
+
+                        onEditClick = {
+                            if (!uiState.isLocationSaving) {
+                                navController.navigate(
+                                    Route.WORKOUT_EXERCISE_SELECT
                                 )
                             }
                         }
+                    )
+
+
+
+                    // 추천 루틴 저장 실패
+                    uiState.locationErrorMessage?.let { message ->
+                        FitMateDialog(
+                            title = "추천 루틴 저장 실패",
+                            message = message,
+                            showDismissButton = false,
+                            onConfirm = viewModel::clearLocationError,
+                            onDismiss = viewModel::clearLocationError
+                        )
+                    }
+                }
+            }
+
+
+            composable(Route.WORKOUT_PREVIEW) { backStackEntry ->
+
+                val workoutEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry(Route.WORKOUT)
+                }
+
+                val viewModel: WorkoutViewModel = hiltViewModel(workoutEntry)
+                val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+                val today = java.time.LocalDate.now()
+                val todayRecommendedRoutine = uiState.recommendedDays
+                    .firstOrNull { it.day.name == today.dayOfWeek.name }
+
+                val isRecommendationPreview =
+                    uiState.isRerecommendationReady &&
+                            todayRecommendedRoutine != null
+
+                when {
+                    // AI가 새로 추천한 운동 루틴 미리보기
+                    isRecommendationPreview -> {
+                        val routine = todayRecommendedRoutine!!
+
+                        val previewState = WorkoutTodayUiState(
+                            category = routine.mainTarget.name,
+                            date = today.toString(),
+                            durationMinutes = routine.estimatedMinutes,
+                            averageRestSeconds = routine.exercises
+                                .map { it.restSeconds }
+                                .takeIf { it.isNotEmpty() }
+                                ?.average()
+                                ?.toInt() ?: 0,
+                            gymName = uiState.environments
+                                ?.let { environments ->
+                                    // 운동 장소 이름은 환경 모델 구조 확인 후 연결
+                                    ""
+                                } ?: "",
+                            exercises = routine.exercises.map { exercise ->
+                                TodayExercise(
+                                    name = exercise.name,
+                                    detail = when {
+                                        exercise.durationSeconds != null ->
+                                            "${exercise.durationSeconds}초"
+
+                                        exercise.weightKg != null &&
+                                                exercise.reps != null ->
+                                            "${exercise.weightKg}kg / ${exercise.reps}회 × ${exercise.sets}세트"
+
+                                        exercise.reps != null ->
+                                            "${exercise.reps}회 × ${exercise.sets}세트"
+
+                                        else -> "운동 정보 없음"
+                                    },
+                                    rest = "휴식 ${exercise.restSeconds}초",
+                                    needsWeight = false
+                                )
+                            }
+                        )
+
+                        TodayWorkoutScreen(
+                            state = previewState,
+                            isPreview = true,
+                            onBack = {
+                                navController.popBackStack()
+                            }
+                        )
+                    }
+
+                    // 기존에 저장된 오늘의 운동 미리보기
+                    uiState.workout != null -> {
+                        TodayWorkoutScreen(
+                            state = uiState.workout!!.toUiState(),
+                            isPreview = true,
+                            onBack = {
+                                navController.popBackStack()
+                            }
+                        )
                     }
 
                     else -> {
@@ -843,7 +885,7 @@ fun FitMateNavHost() {
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("오늘의 운동 정보가 없어요.")
+                            Text("미리보기할 운동 루틴이 없어요.")
                         }
                     }
                 }
@@ -863,7 +905,17 @@ fun FitMateNavHost() {
                     viewModel.loadExerciseCatalog()
                 }
 
-                val exercises = uiState.exerciseCatalog.mapIndexed { index, item ->
+                // 추천 운동을 먼저 배치해 선택/설정 순서가 기존 운동 순서와 일치하도록 한다.
+                val todayRecommendedCodes = uiState.recommendedDays
+                    .firstOrNull { it.day.name == java.time.LocalDate.now().dayOfWeek.name }
+                    ?.exercises?.map { it.exerciseCode }.orEmpty()
+                val orderedCatalog = uiState.exerciseCatalog.sortedWith(
+                    compareBy { item ->
+                        val position = todayRecommendedCodes.indexOf(item.exerciseCode)
+                        if (position >= 0) position else Int.MAX_VALUE
+                    }
+                )
+                val exercises = orderedCatalog.mapIndexed { index, item ->
                     SelectableExercise(
                         id = index + 1,
                         name = item.nameKo,
@@ -877,19 +929,13 @@ fun FitMateNavHost() {
                             else -> item.primaryMuscle
                         },
                         equipment = item.exerciseType,
-                        exerciseCode = item.exerciseCode
+                        exerciseCode = item.exerciseCode,
+                        baselineRecordType = item.baselineRecordType
                     )
                 }
 
                 when {
-                    uiState.isCatalogLoading -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
-                        }
-                    }
+
 
                     uiState.catalogErrorMessage != null -> {
                         Column(
@@ -913,17 +959,39 @@ fun FitMateNavHost() {
                     else -> {
                         WorkoutExerciseSelectScreen(
                             exercises = exercises,
-                            initialSelectedIds = emptySet(),
+                            initialSelectedIds = exercises
+                                .filter { exercise ->
+                                    uiState.recommendedDays
+                                        .firstOrNull {
+                                            it.day.name == java.time.LocalDate.now().dayOfWeek.name
+                                        }
+                                        ?.exercises
+                                        ?.any { it.exerciseCode == exercise.exerciseCode } == true
+                                }
+                                .map { it.id }
+                                .toSet(),
                             onBack = {
                                 navController.popBackStack()
                             },
                             onNext = { selectedExercises ->
+                                val chosen = selectedExercises.map { it.exerciseCode }
+                                val orderedCodes = if (uiState.isRerecommendationReady) {
+                                    // 기존 슬롯은 유지하고, 제거한 운동의 자리에 새 운동을 넣는다.
+                                    val added = chosen.filterNot { it in todayRecommendedCodes }.iterator()
+                                    val slots = todayRecommendedCodes.mapNotNull { oldCode ->
+                                        when {
+                                            oldCode in chosen -> oldCode
+                                            added.hasNext() -> added.next()
+                                            else -> null
+                                        }
+                                    }
+                                    slots + added.asSequence().toList()
+                                } else {
+                                    chosen
+                                }
                                 navController.currentBackStackEntry
                                     ?.savedStateHandle
-                                    ?.set(
-                                        "selected_exercise_codes",
-                                        ArrayList(selectedExercises.map { it.exerciseCode })
-                                    )
+                                    ?.set("selected_exercise_codes", ArrayList(orderedCodes))
 
                                 navController.navigate(Route.WORKOUT_EXERCISE_SETTING)
                             }
@@ -968,9 +1036,34 @@ fun FitMateNavHost() {
                                 else -> item.primaryMuscle
                             },
                             equipment = item.exerciseType,
-                            exerciseCode = item.exerciseCode
+                            exerciseCode = item.exerciseCode,
+                            baselineRecordType = item.baselineRecordType
                         )
                     }
+
+                val todayWorkoutDay = uiState.recommendedDays
+                    .firstOrNull {
+                        it.day.name == java.time.LocalDate.now().dayOfWeek.name
+                    }
+                    ?.day
+
+                val recommendedPrescriptions = uiState.recommendedDays
+                    .firstOrNull { it.day == todayWorkoutDay }
+                    ?.exercises
+                    .orEmpty()
+
+                LaunchedEffect(uiState.isLocationUpdated) {
+                    if (uiState.isLocationUpdated) {
+                        viewModel.clearLocationUpdated()
+
+                        navController.navigate(Route.WORKOUT) {
+                            popUpTo(Route.WORKOUT) {
+                                inclusive = false
+                            }
+                            launchSingleTop = true
+                        }
+                    }
+                }
 
                 // PUT 저장 성공 시 미리보기 화면으로 이동
                 LaunchedEffect(uiState.isExerciseSaved) {
@@ -985,7 +1078,7 @@ fun FitMateNavHost() {
 
                 WorkoutExerciseSettingScreen(
                     selectedExercises = selectedExercises,
-                    isSaving = uiState.isExerciseSaving,
+                    isSaving = uiState.isExerciseSaving || uiState.isLocationSaving,
                     onBack = {
                         if (!uiState.isExerciseSaving) {
                             navController.popBackStack()
@@ -1004,10 +1097,27 @@ fun FitMateNavHost() {
                             } else {
                                 WorkoutExercise(
                                     exerciseCode = exerciseCode,
-                                    weightKg = setting.weight.toIntOrNull(),
-                                    reps = setting.reps.toIntOrNull(),
-                                    sets = setting.sets.toIntOrNull(),
-                                    durationSeconds = null,
+
+                                    weightKg = when (setting.exercise.baselineRecordType) {
+                                        "WEIGHT_REPS_SETS" -> setting.weight.toIntOrNull()
+                                        else -> null
+                                    },
+
+                                    reps = when (setting.exercise.baselineRecordType) {
+                                        "WEIGHT_REPS_SETS", "REPS_SETS" -> setting.reps.toIntOrNull()
+                                        else -> null
+                                    },
+
+                                    sets = when (setting.exercise.baselineRecordType) {
+                                        "WEIGHT_REPS_SETS", "REPS_SETS" -> setting.sets.toIntOrNull()
+                                        else -> null
+                                    },
+
+                                    durationSeconds = when (setting.exercise.baselineRecordType) {
+                                        "DURATION" -> setting.durationSeconds.toIntOrNull()
+                                        else -> null
+                                    },
+
                                     restSeconds = setting.restSeconds,
                                     appliedAdjustmentId = null
                                 )
@@ -1019,42 +1129,81 @@ fun FitMateNavHost() {
                             return@WorkoutExerciseSettingScreen
                         }
 
-                        // PUT API 호출
-                        viewModel.saveWorkoutExercises(exercises)
+                        if (uiState.isRerecommendationReady) {
+
+                            val day = todayWorkoutDay
+                                ?: return@WorkoutExerciseSettingScreen
+
+                            val prescriptions = exercises.map { exercise ->
+
+                                val existing = recommendedPrescriptions
+                                    .firstOrNull {
+                                        it.exerciseCode == exercise.exerciseCode
+                                    }
+
+                                val catalogItem = uiState.exerciseCatalog
+                                    .firstOrNull {
+                                        it.exerciseCode == exercise.exerciseCode
+                                    }
+
+                                com.fitmate.domain.model.ExercisePrescription(
+                                    exerciseCode = exercise.exerciseCode,
+                                    name = existing?.name
+                                        ?: catalogItem?.nameKo
+                                        ?: exercise.exerciseCode,
+                                    sets = exercise.sets ?: existing?.sets ?: 1,
+                                    reps = exercise.reps ?: existing?.reps,
+                                    weightKg = exercise.weightKg,
+                                    durationSeconds = exercise.durationSeconds,
+                                    restSeconds = exercise.restSeconds
+                                        ?: existing?.restSeconds
+                                        ?: 60
+                                )
+                            }
+
+                            val updated = viewModel.updateRecommendedExercises(
+                                day = day,
+                                exercises = prescriptions
+                            )
+
+                            if (updated) {
+                                // 수정한 AI 추천 루틴을 서버에 저장
+                                viewModel.saveRecommendedRoutine()
+                            }
+
+                        } else {
+                            // 기존에 저장된 운동을 수정하는 경우
+                            viewModel.saveWorkoutExercises(exercises)
+                        }
                     }
                 )
 
+                // 기존 운동 설정 저장 실패 다이얼로그
                 uiState.exerciseSaveErrorMessage?.let { message ->
-                    AlertDialog(
-                        onDismissRequest = viewModel::clearExerciseSaveError,
-                        title = {
-                            Text("운동 설정 저장 실패")
-                        },
-                        text = {
-                            Text(message)
-                        },
-                        confirmButton = {
-                            TextButton(
-                                onClick = viewModel::clearExerciseSaveError
-                            ) {
-                                Text("확인")
-                            }
-                        }
+                    FitMateDialog(
+                        title = "운동 설정 저장 실패",
+                        message = message,
+                        showDismissButton = false,
+                        onConfirm = viewModel::clearExerciseSaveError,
+                        onDismiss = viewModel::clearExerciseSaveError
                     )
                 }
 
-                if (uiState.isExerciseSaving) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.White.copy(alpha = 0.7f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                }
-            }
 
+                uiState.locationErrorMessage?.let { message ->
+                    FitMateDialog(
+                        title = "루틴 저장 실패",
+                        message = message,
+                        confirmText = "확인",
+                        showDismissButton = false,
+                        onConfirm = viewModel::clearLocationError,
+                        onDismiss = viewModel::clearLocationError
+                    )
+                }
+
+
+
+            }
 
 
             // 운동 수행 화면
@@ -1073,7 +1222,6 @@ fun FitMateNavHost() {
                     }
                 )
             }
-
 
 
             // 운동 시작 API 성공 후 이동하는 화면
@@ -1099,6 +1247,12 @@ fun FitMateNavHost() {
                 // 2. ViewModel 연결
                 val viewModel: WorkoutSessionViewModel = hiltViewModel()
                 val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+                val analysisViewModel: WorkoutAnalysisViewModel =
+                    hiltViewModel(backStackEntry)
+
+                val analysisState by analysisViewModel.uiState
+                    .collectAsStateWithLifecycle()
 
 
                 val workoutBackStackEntry = remember(backStackEntry) {
@@ -1127,7 +1281,6 @@ fun FitMateNavHost() {
                         )
                     }
                 }
-
 
 
                 val progressExercises = workoutState.workout
@@ -1170,8 +1323,8 @@ fun FitMateNavHost() {
 
 
                 // 3. 서버 저장 성공 시 홈으로 이동
-                LaunchedEffect(uiState.isAdjustmentsApplied) {
-                    if (uiState.isAdjustmentsApplied) {
+                LaunchedEffect(analysisState.isAdjustmentsApplied) {
+                    if (analysisState.isAdjustmentsApplied) {
                         navController.navigate(Route.HOME) {
                             popUpTo(Route.HOME) {
                                 inclusive = false
@@ -1185,21 +1338,12 @@ fun FitMateNavHost() {
                 Box(modifier = Modifier.fillMaxSize()) {
 
                     uiState.guideErrorMessage?.let { message ->
-                        AlertDialog(
-                            onDismissRequest = viewModel::clearGuideError,
-                            title = {
-                                Text("운동 가이드 조회 실패")
-                            },
-                            text = {
-                                Text(message)
-                            },
-                            confirmButton = {
-                                TextButton(
-                                    onClick = viewModel::clearGuideError
-                                ) {
-                                    Text("확인")
-                                }
-                            }
+                        FitMateDialog(
+                            title = "운동 가이드 조회 실패",
+                            message = message,
+                            showDismissButton = false,
+                            onConfirm = viewModel::clearGuideError,
+                            onDismiss = viewModel::clearGuideError
                         )
                     }
 
@@ -1207,27 +1351,62 @@ fun FitMateNavHost() {
 
                         WorkoutProgressScreen(
                             exercises = progressExercises,
+
+                            // 운동 기록 저장 상태
                             isWorkoutSaved = uiState.isFinished,
                             isFinishing = uiState.isFinishing,
                             finishErrorMessage = uiState.errorMessage,
 
-                            recommendation = uiState.recommendation,
-                            isRecommendationLoading = uiState.isRecommendationLoading,
-                            recommendationErrorMessage = uiState.recommendationErrorMessage,
+                            // 운동 분석 결과
+                            analysis = analysisState.analysis,
+                            isAnalysisLoading = analysisState.isAnalysisLoading,
+                            analysisErrorMessage = analysisState.analysisErrorMessage,
 
-                            onLoadRecommendation = {
-                                if (workoutRecordId != null && uiState.isFinished) {
-                                    viewModel.loadWorkoutRecommendations(workoutRecordId)
+                            // 운동 분석 API 호출
+                            onLoadAnalysis = {
+                                if (uiState.isFinished) {
+                                    analysisViewModel.loadWorkoutAnalysis(
+                                        workoutRecordId
+                                    )
                                 }
                             },
 
+                            // 다음 운동 루틴이 없는 경우 홈으로 이동
+                            onResultDone = {
+                                navController.navigate(Route.HOME) {
+                                    popUpTo(Route.HOME) {
+                                        inclusive = false
+                                    }
+                                    launchSingleTop = true
+                                }
+                            },
+
+                            // AI 운동 강도 추천 상태
+                            recommendation = analysisState.recommendation,
+                            isRecommendationLoading = analysisState.isRecommendationLoading,
+                            recommendationErrorMessage = analysisState.recommendationErrorMessage,
+
+                            // AI 운동 강도 추천 API 호출
+                            onLoadRecommendation = {
+                                if (uiState.isFinished) {
+                                    analysisViewModel.loadWorkoutRecommendations(
+                                        workoutRecordId
+                                    )
+                                }
+                            },
+
+                            // AI 추천 적용
                             onApplyAdjustments = { selectedItems ->
-                                val recommendation = uiState.recommendation
+
+                                val recommendation = analysisState.recommendation
 
                                 if (recommendation != null && uiState.isFinished) {
+
                                     val request = ApplyWorkoutAdjustments(
                                         exercises = recommendation.exercises.mapIndexed { index, exercise ->
-                                            val isSelected = selectedItems.any { it.id == index + 1 }
+
+                                            val isSelected =
+                                                selectedItems.any { it.id == index + 1 }
 
                                             ApplyWorkoutAdjustmentExercise(
                                                 exerciseId = exercise.exerciseId,
@@ -1240,7 +1419,7 @@ fun FitMateNavHost() {
                                         }
                                     )
 
-                                    viewModel.applyWorkoutRecommendations(
+                                    analysisViewModel.applyWorkoutRecommendations(
                                         workoutRecordId = workoutRecordId,
                                         request = request
                                     )
@@ -1250,59 +1429,91 @@ fun FitMateNavHost() {
                             onBack = {
                                 navController.popBackStack()
                             },
+
+                            // 운동 기록 저장
+                            // 운동 기록 저장
                             onFinish = { result: WorkoutSessionResult ->
+
+                                val finishedExercises = workoutState.workout
+                                    ?.exercises
+                                    ?.mapIndexedNotNull { index, exercise ->
+
+                                        val routineExerciseId = exercise.routineExerciseId
+                                            ?: return@mapIndexedNotNull null
+
+                                        val progressId = index + 1
+
+                                        val completedSetCount =
+                                            result.completedSets[progressId] ?: 0
+
+                                        val completedDurationSeconds =
+                                            (result.exerciseElapsed[progressId] ?: 0L)
+                                                .toInt()
+
+                                        FinishWorkoutExercise(
+                                            routineExerciseId = routineExerciseId,
+
+                                            completedSetCount = when (exercise.baselineRecordType) {
+                                                "DURATION" -> if (completedDurationSeconds > 0) 1 else 0
+                                                else -> completedSetCount
+                                            },
+
+                                            completedDurationSeconds =
+                                                completedDurationSeconds,
+
+                                            minHeartRate = null,
+                                            maxHeartRate = null
+                                        )
+                                    }
+                                    .orEmpty()
+
+                                // 루틴별 운동 ID 누락 검사
+                                if (
+                                    finishedExercises.isEmpty() ||
+                                    finishedExercises.size !=
+                                    workoutState.workout?.exercises?.size
+                                ) {
+                                    Log.e(
+                                        "FitMateFinish",
+                                        "운동 기록 저장 실패: routineExerciseId 누락"
+                                    )
+
+                                    return@WorkoutProgressScreen
+                                }
+
+                                // 프론트 난이도를 서버 Enum으로 변환
+                                val perceivedDifficulty = result.difficulty.apiValue
 
                                 val request = FinishWorkout(
                                     dailyRoutineId = dailyRoutineId,
                                     workoutRecordId = workoutRecordId,
-                                    endedAt = Instant.now().toString(),
+                                    endedAt = LocalDateTime.now(ZoneId.of("Asia/Seoul"))
+                                        .format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")),
                                     actualExerciseSeconds = result.exerciseSeconds,
                                     actualRestSeconds = result.restSeconds,
                                     minHeartRate = null,
                                     maxHeartRate = null,
-                                    exercises = workoutState.workout
-                                        ?.exercises
-                                        ?.mapIndexed { index, exercise ->
-                                            val completedSetCount =
-                                                result.completedSets[index + 1] ?: 0
+                                    exercises = finishedExercises,
+                                    perceivedDifficulty = perceivedDifficulty
+                                )
 
-                                            exercise.copy(
-                                                sets = completedSetCount
-                                            )
-                                        }
-                                        .orEmpty(),
-                                    perceivedDifficulty = result.difficulty.name
+                                Log.d(
+                                    "FitMateFinish",
+                                    "운동 종료 요청: $request"
                                 )
 
                                 viewModel.finishWorkout(request)
                             }
                         )
 
-                        if (uiState.isApplyingAdjustments) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(Color.White.copy(alpha = 0.7f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator()
-                            }
-                        }
 
-                        uiState.applyErrorMessage?.let { message ->
-                            AlertDialog(
-                                onDismissRequest = viewModel::clearApplyError,
-                                title = {
-                                    Text("운동 강도 저장 실패")
-                                },
-                                text = {
-                                    Text(message)
-                                },
-                                confirmButton = {
-                                    TextButton(onClick = viewModel::clearApplyError) {
-                                        Text("확인")
-                                    }
-                                }
+                        analysisState.applyErrorMessage?.let { message ->
+                            FitMateDialog(
+                                title = "운동 강도 저장 실패",
+                                message = message,
+                                showDismissButton = false,
+                                onConfirm = analysisViewModel::clearApplyError,
+                                onDismiss = analysisViewModel::clearApplyError
                             )
                         }
 
@@ -1310,33 +1521,6 @@ fun FitMateNavHost() {
                     } else {
                         Text("운동 기록 정보를 찾을 수 없어요.")
                     }
-
-                    // 운동 기록 저장 중 로딩
-                    if (uiState.isFinishing) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    Color.White.copy(alpha = 0.7f)
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
-                        }
-                    }
-
-
-                    if (uiState.isGuideLoading && !uiState.isFinished) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.White.copy(alpha = 0.7f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
-                        }
-                    }
-
                 }
             }
 
@@ -1626,7 +1810,10 @@ fun FitMateNavHost() {
 
 // 루틴 만들기 화면 (방식 선택 ~ 저장). 그래프 범위의 RoutineCreateViewModel 하나에 조건 / 추천 결과 / 초안을 모은다
 private fun NavGraphBuilder.routineCreateGraph(navController: NavHostController) {
-    navigation(startDestination = Route.ROUTINE_CREATE_METHOD, route = Route.ROUTINE_CREATE_GRAPH) {
+    navigation(
+        startDestination = Route.ROUTINE_CREATE_METHOD,
+        route = Route.ROUTINE_CREATE_GRAPH
+    ) {
 
         routineCreateComposable(navController, Route.ROUTINE_CREATE_METHOD) { _, _ ->
             RoutineCreationMethodScreen(
@@ -1636,7 +1823,10 @@ private fun NavGraphBuilder.routineCreateGraph(navController: NavHostController)
             )
         }
 
-        routineCreateComposable(navController, Route.ROUTINE_AI_HANDSOFF_SETUP) { viewModel, state ->
+        routineCreateComposable(
+            navController,
+            Route.ROUTINE_AI_HANDSOFF_SETUP
+        ) { viewModel, state ->
             LaunchedEffect(viewModel) { viewModel.ensureLoaded() }
             state.condition?.let { condition ->
                 AiHandsOffSetupScreen(
@@ -1663,7 +1853,10 @@ private fun NavGraphBuilder.routineCreateGraph(navController: NavHostController)
             }
         }
 
-        routineCreateComposable(navController, Route.ROUTINE_SCHEDULE_CHANGE) { viewModel, state ->
+        routineCreateComposable(
+            navController,
+            Route.ROUTINE_SCHEDULE_CHANGE
+        ) { viewModel, state ->
             state.condition?.let { condition ->
                 RoutineScheduleChangeScreen(
                     condition = condition,
@@ -1732,7 +1925,10 @@ private fun NavGraphBuilder.routineCreateGraph(navController: NavHostController)
             }
         }
 
-        routineCreateComposable(navController, Route.ROUTINE_MANUAL_DAY_SELECT) { viewModel, state ->
+        routineCreateComposable(
+            navController,
+            Route.ROUTINE_MANUAL_DAY_SELECT
+        ) { viewModel, state ->
             LaunchedEffect(viewModel) { viewModel.ensureLoaded() }
             ManualDaySelectionScreen(
                 draft = state.draft,
@@ -1751,7 +1947,10 @@ private fun NavGraphBuilder.routineCreateGraph(navController: NavHostController)
             )
         }
 
-        routineCreateComposable(navController, Route.ROUTINE_MANUAL_EXERCISE_SELECT) { viewModel, state ->
+        routineCreateComposable(
+            navController,
+            Route.ROUTINE_MANUAL_EXERCISE_SELECT
+        ) { viewModel, state ->
             // 운동 장소를 불러온 뒤에 그 장소에서 할 수 있는 운동을 불러온다
             LaunchedEffect(state.condition) { viewModel.loadAvailableExercises() }
             ManualExerciseSelectionScreen(
@@ -1781,7 +1980,10 @@ private fun NavGraphBuilder.routineCreateGraph(navController: NavHostController)
             RoutineAiLoadingScreen()
         }
 
-        routineCreateComposable(navController, Route.ROUTINE_EXERCISE_CONFIG) { viewModel, state ->
+        routineCreateComposable(
+            navController,
+            Route.ROUTINE_EXERCISE_CONFIG
+        ) { viewModel, state ->
             ExerciseConfigurationScreen(
                 settings = state.configSettings,
                 recommendations = state.recommendations,
@@ -1829,7 +2031,8 @@ private fun NavGraphBuilder.routineCreateComposable(
     content: @Composable (RoutineCreateViewModel, RoutineCreateUiState) -> Unit
 ) {
     composable(route) { entry ->
-        val graphEntry = remember(entry) { navController.getBackStackEntry(Route.ROUTINE_CREATE_GRAPH) }
+        val graphEntry =
+            remember(entry) { navController.getBackStackEntry(Route.ROUTINE_CREATE_GRAPH) }
         val viewModel: RoutineCreateViewModel = hiltViewModel(graphEntry)
         val state by viewModel.uiState.collectAsStateWithLifecycle()
         RoutineCreateEventEffect(
@@ -1901,7 +2104,12 @@ private fun NavGraphBuilder.signupGraph(navController: NavHostController) {
                 onBodyFatPercentChange = viewModel::onBodyFatPercentageChange,
                 onBodyFatMassChange = viewModel::onBodyFatMassChange,
                 onBack = { navController.popBackStack() },
-                onNext = { viewModel.next(SignupStep.OptionalBodyInfo, Route.EXERCISE_EXPERIENCE) },
+                onNext = {
+                    viewModel.next(
+                        SignupStep.OptionalBodyInfo,
+                        Route.EXERCISE_EXPERIENCE
+                    )
+                },
                 onSkip = {
                     viewModel.skipOptionalBodyInfo()
                     navController.navigate(Route.EXERCISE_EXPERIENCE)
@@ -2101,3 +2309,4 @@ private fun NavHostController.navigateToTab(route: String) {
         restoreState = true
     }
 }
+
