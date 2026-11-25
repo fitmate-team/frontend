@@ -46,8 +46,15 @@ fun WorkoutLocationScreen(
         mutableStateOf(initialPlace)
     }
 
-    var selectedGym by remember(currentGym) {
-        mutableStateOf(currentGym)
+    val validGymOptions = gymOptions.filter { it.isNotBlank() }
+
+    val defaultGym = currentGym
+        .takeIf { it in validGymOptions }
+        ?: validGymOptions.firstOrNull()
+        ?: ""
+
+    var selectedGym by remember(defaultGym) {
+        mutableStateOf(defaultGym)
     }
 
     var expanded by remember {

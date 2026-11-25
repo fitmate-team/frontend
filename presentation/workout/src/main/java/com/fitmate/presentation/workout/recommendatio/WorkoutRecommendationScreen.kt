@@ -1,3 +1,4 @@
+
 package com.fitmate.presentation.workout.recommendatio
 
 import androidx.compose.foundation.background
@@ -5,9 +6,11 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -28,48 +31,27 @@ data class WorkoutChange(
 
 @Composable
 fun WorkoutRecommendationScreen(
+    workoutChanges: List<WorkoutChange> = emptyList(),
     onBack: () -> Unit = {},
     onPreviewClick: () -> Unit = {},
     onStartWorkout: () -> Unit = {},
     onEditClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-
-    val workoutChanges = listOf(
-        WorkoutChange(
-            previousExercise = "레그프레스",
-            newExercise = "덤벨 스쿼트"
-        ),
-        WorkoutChange(
-            previousExercise = "랫풀다운",
-            newExercise = "밴드 랫풀다운"
-        ),
-        WorkoutChange(
-            previousExercise = "케이블 로우",
-            newExercise = "덤벨 로우"
-        )
-    )
-
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(White)
     ) {
-
-        // 상단 헤더
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(80.dp)
-                .border(
-                    width = 0.5.dp,
-                    color = BorderDefault
-                )
+                .border(0.5.dp, BorderDefault)
                 .padding(horizontal = 24.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-
             Icon(
                 imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
                 contentDescription = "뒤로가기",
@@ -87,7 +69,6 @@ fun WorkoutRecommendationScreen(
             )
         }
 
-        // 본문
         LazyColumn(
             modifier = Modifier
                 .weight(1f)
@@ -100,9 +81,7 @@ fun WorkoutRecommendationScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-
             item {
-
                 Text(
                     text = "루틴을 바꾸었어요.",
                     style = MaterialTheme.typography.headlineSmall,
@@ -121,15 +100,21 @@ fun WorkoutRecommendationScreen(
                 Spacer(Modifier.height(10.dp))
             }
 
-            items(workoutChanges.size) { index ->
-
-                WorkoutChangeCard(
-                    change = workoutChanges[index]
-                )
+            if (workoutChanges.isEmpty()) {
+                item {
+                    Text(
+                        text = "변경된 운동 목록이 없어요.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondary
+                    )
+                }
+            } else {
+                items(workoutChanges) { change ->
+                    WorkoutChangeCard(change)
+                }
             }
 
             item {
-
                 Spacer(Modifier.height(4.dp))
 
                 Row(
@@ -137,15 +122,14 @@ fun WorkoutRecommendationScreen(
                         .fillMaxWidth()
                         .height(44.dp)
                         .border(
-                            width = 1.dp,
-                            color = BorderDefault,
-                            shape = RoundedCornerShape(12.dp)
+                            1.dp,
+                            BorderDefault,
+                            RoundedCornerShape(12.dp)
                         )
                         .clickable(onClick = onPreviewClick)
                         .padding(horizontal = 14.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-
                     Icon(
                         painter = painterResource(
                             R.drawable.ic_workout_preview
@@ -177,7 +161,6 @@ fun WorkoutRecommendationScreen(
             }
         }
 
-        // 하단 버튼
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -187,7 +170,6 @@ fun WorkoutRecommendationScreen(
                 ),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-
             PrimaryWorkoutButton(
                 label = "변경된 루틴으로 운동하기",
                 onClick = onStartWorkout
@@ -198,14 +180,13 @@ fun WorkoutRecommendationScreen(
                     .fillMaxWidth()
                     .height(48.dp)
                     .border(
-                        width = 1.dp,
-                        color = Blue600,
-                        shape = RoundedCornerShape(12.dp)
+                        1.dp,
+                        Blue600,
+                        RoundedCornerShape(12.dp)
                     )
                     .clickable(onClick = onEditClick),
                 contentAlignment = Alignment.Center
             ) {
-
                 Text(
                     text = "직접 수정하기",
                     style = MaterialTheme.typography.titleMedium,
@@ -221,24 +202,21 @@ fun WorkoutRecommendationScreen(
 private fun WorkoutChangeCard(
     change: WorkoutChange
 ) {
-
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(100.dp)
             .border(
-                width = 1.dp,
-                color = BorderDefault,
-                shape = RoundedCornerShape(14.dp)
+                1.dp,
+                BorderDefault,
+                RoundedCornerShape(14.dp)
             )
             .padding(
                 horizontal = 20.dp,
-                vertical = 8.dp
+                vertical = 14.dp
             ),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-
         Text(
             text = change.previousExercise,
             style = MaterialTheme.typography.bodySmall,
@@ -248,12 +226,10 @@ private fun WorkoutChangeCard(
         Spacer(Modifier.height(4.dp))
 
         Icon(
-            painter = painterResource(
-                R.drawable.ic_workout_change_down
-            ),
+            imageVector = Icons.Rounded.KeyboardArrowDown,
             contentDescription = "변경",
-            modifier = Modifier.size(20.dp),
-            tint = Color.Unspecified
+            tint = Blue600,
+            modifier = Modifier.size(24.dp)
         )
 
         Spacer(Modifier.height(4.dp))
