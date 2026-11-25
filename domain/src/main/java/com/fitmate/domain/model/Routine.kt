@@ -94,3 +94,25 @@ data class TodayRoutine(
     val hasWorkedOut: Boolean,
     val exerciseNames: List<String>
 )
+
+data class DailyRoutineRecommendation(
+    val mainTarget: String,
+    val estimatedMinutes: Int,
+    val replacements: List<DailyExerciseReplacement>
+)
+
+data class DailyExerciseReplacement(
+    val originalExerciseCode: String,
+    val replacementExercise: DailyReplacementExercise
+)
+
+data class DailyReplacementExercise(
+    val exerciseCode: String,
+    val nameKo: String,
+    val weightKg: Int? = null,
+    val reps: Int? = null,
+    val sets: Int? = null,
+    val durationSeconds: Int? = null,
+    val restSeconds: Int? = null,
+    val appliedAdjustmentId: Long? = null
+)

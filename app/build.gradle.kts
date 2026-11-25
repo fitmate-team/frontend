@@ -35,13 +35,13 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
         isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
 
     buildFeatures {
@@ -63,6 +63,7 @@ dependencies {
 
     implementation("androidx.compose.material:material-icons-extended")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
+
     implementation(libs.hilt.android)
     add("ksp", libs.hilt.compiler)
 

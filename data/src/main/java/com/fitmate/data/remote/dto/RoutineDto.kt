@@ -107,7 +107,7 @@ data class TodayExerciseResponseDto(
 )
 
 @Serializable
-data class TodayWorkoutResponseDto(
+data class RoutineTodayWorkoutResponseDto(
     val dailyRoutineId: Long,
     val workoutDate: String,
     val workoutEnvironmentId: Long,
@@ -193,4 +193,44 @@ data class CustomAiSummaryRequestDto(
 data class CustomSummaryOutputDto(
     val mainTarget: String,
     val estimatedMinutes: Int
+)
+
+
+@Serializable
+data class DailyAiRoutineRequestDto(
+    val environmentId: Long,
+    val sessionMinutes: Int
+)
+
+@Serializable
+data class DailyRoutineOutputDto(
+    val mainTarget: String,
+    val estimatedMinutes: Int,
+    val replacements: List<DailyExerciseReplacementDto> = emptyList()
+)
+
+@Serializable
+data class DailyExerciseReplacementDto(
+    val originalExerciseCode: String,
+    val replacementExercise: DailyReplacementExerciseDto
+)
+
+@Serializable
+data class DailyReplacementExerciseDto(
+    val exerciseCode: String,
+    val nameKo: String,
+    val weightKg: Int? = null,
+    val reps: Int? = null,
+    val sets: Int? = null,
+    val durationSeconds: Int? = null,
+    val restSeconds: Int? = null,
+    val appliedAdjustmentId: Long? = null
+)
+@Serializable
+data class DailyRoutineSaveRequestDto(
+    val environmentId: Long,
+    val sessionMinutes: Int,
+    val mainTarget: String,
+    val estimatedMinutes: Int,
+    val replacements: List<DailyExerciseReplacementDto>
 )

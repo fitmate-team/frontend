@@ -1,4 +1,4 @@
-package com.fitmate.presentation.workout
+package com.fitmate.presentation.workout.recommendatio
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -15,6 +15,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.LaunchedEffect
+import com.fitmate.presentation.designsystem.R
 import kotlinx.coroutines.delay
 
 @Composable
@@ -37,7 +38,7 @@ fun WorkoutRecommendationLoadingScreen(
     ) {
         Image(
             painter = painterResource(
-                id = com.fitmate.presentation.designsystem.R.drawable.img_fitmate_robot
+                id = R.drawable.img_fitmate_robot
             ),
             contentDescription = "FitMate AI",
             modifier = Modifier.size(150.dp)

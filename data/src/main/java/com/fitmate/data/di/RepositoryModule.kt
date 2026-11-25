@@ -7,6 +7,8 @@ import com.fitmate.data.repository.RoutineRepositoryImpl
 import com.fitmate.data.repository.WorkoutRecordRepositoryImpl
 import com.fitmate.domain.repository.AuthRepository
 import com.fitmate.domain.repository.CatalogRepository
+import com.fitmate.data.repository.WorkoutRepositoryImpl
+import com.fitmate.domain.repository.WorkoutRepository
 import com.fitmate.domain.repository.MemberRepository
 import com.fitmate.domain.repository.RoutineRepository
 import com.fitmate.domain.repository.WorkoutRecordRepository
@@ -27,6 +29,12 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindCatalogRepository(impl: CatalogRepositoryImpl): CatalogRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindWorkoutRepository(
+        impl: WorkoutRepositoryImpl
+    ): WorkoutRepository
 
     @Binds
     @Singleton

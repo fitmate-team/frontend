@@ -1,4 +1,4 @@
-package com.fitmate.presentation.workout
+package com.fitmate.presentation.workout.setup
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 
 import com.fitmate.presentation.designsystem.R
 import com.fitmate.presentation.designsystem.theme.*
+import com.fitmate.presentation.workout.today.PrimaryWorkoutButton
 
 enum class WorkoutPlace {
     GYM,
@@ -29,24 +30,31 @@ enum class WorkoutPlace {
     OUTDOOR
 }
 
+
 @Composable
 fun WorkoutLocationScreen(
     currentGym: String = "Fit Gym",
-    gymOptions: List<String> = listOf(
-        "Fit Gym",
-        "별내 피트니스 센터"
-    ),
+    gymOptions: List<String> = emptyList(),
+    initialPlace: WorkoutPlace = WorkoutPlace.GYM,
+    isLoading: Boolean = false,
     onBack: () -> Unit = {},
     onConfirm: (WorkoutPlace, String?) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
 
-    var selectedPlace by remember {
-        mutableStateOf(WorkoutPlace.GYM)
+    var selectedPlace by remember(initialPlace) {
+        mutableStateOf(initialPlace)
     }
 
-    var selectedGym by remember(currentGym) {
-        mutableStateOf(currentGym)
+    val validGymOptions = gymOptions.filter { it.isNotBlank() }
+
+    val defaultGym = currentGym
+        .takeIf { it in validGymOptions }
+        ?: validGymOptions.firstOrNull()
+        ?: ""
+
+    var selectedGym by remember(defaultGym) {
+        mutableStateOf(defaultGym)
     }
 
     var expanded by remember {
@@ -54,8 +62,10 @@ fun WorkoutLocationScreen(
     }
 
     val isChanged =
-        selectedPlace != WorkoutPlace.GYM ||
-                selectedGym != currentGym
+        selectedPlace != initialPlace ||
+                (selectedPlace == WorkoutPlace.GYM &&
+                        initialPlace == WorkoutPlace.GYM &&
+                        selectedGym != currentGym)
 
     Column(
         modifier = modifier
@@ -384,13 +394,12 @@ fun WorkoutLocationScreen(
                     "완료",
 
                 onClick = {
-                    onConfirm(
-                        selectedPlace,
-                        if (selectedPlace == WorkoutPlace.GYM)
-                            selectedGym
-                        else
-                            null
-                    )
+                    if (!isLoading) {
+                        onConfirm(
+                            selectedPlace,
+                            if (selectedPlace == WorkoutPlace.GYM) selectedGym else null
+                        )
+                    }
                 }
             )
         }

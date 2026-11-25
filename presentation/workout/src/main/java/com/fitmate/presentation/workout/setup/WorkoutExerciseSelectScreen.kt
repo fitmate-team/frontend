@@ -1,5 +1,4 @@
-
-package com.fitmate.presentation.workout
+package com.fitmate.presentation.workout.setup
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -18,16 +17,19 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.fitmate.presentation.designsystem.theme.*
+import com.fitmate.presentation.workout.today.PrimaryWorkoutButton
+
 
 data class SelectableExercise(
     val id: Int,
     val name: String,
     val category: String,
-    val equipment: String
+    val equipment: String,
+    val exerciseCode: String = "",
+    val baselineRecordType: String = "WEIGHT_REPS_SETS"
 )
 
 private val exerciseCategories = listOf(
