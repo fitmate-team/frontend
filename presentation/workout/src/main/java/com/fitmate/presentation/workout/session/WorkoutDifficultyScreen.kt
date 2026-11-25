@@ -25,35 +25,40 @@ import com.fitmate.presentation.designsystem.theme.*
 enum class WorkoutDifficulty(
     val title: String,
     val description: String,
-    val iconRes: Int
+    val iconRes: Int,
+    val apiValue: String
 ) {
     VERY_EASY(
         "너무 쉬웠어요.",
         "다음에는 더 높은 강도로.",
-        R.drawable.ic_workout_level_very_easy
+        R.drawable.ic_workout_level_very_easy,
+        "TOO_EASY"
     ),
     EASY(
         "조금 여유 있었어요.",
         "중량이나 횟수를 늘려볼게요.",
-        R.drawable.ic_workout_level_easy
+        R.drawable.ic_workout_level_easy,
+        "SLIGHTLY_EASY"
     ),
     MODERATE(
         "적당히 힘들었어요.",
         "현재 루틴을 유지해요.",
-        R.drawable.ic_workout_level_normal
+        R.drawable.ic_workout_level_normal,
+        "APPROPRIATE"
     ),
     HARD(
         "거의 한계였어요.",
         "내일은 꼭 충분히 쉬세요.",
-        R.drawable.ic_workout_level_hard
+        R.drawable.ic_workout_level_hard,
+        "NEAR_LIMIT"
     ),
     TOO_HARD(
         "목표 수행이 어려워요.",
         "강도를 조금 낮춰볼게요.",
-        R.drawable.ic_workout_level_very_hard
+        R.drawable.ic_workout_level_very_hard,
+        "UNABLE_TO_COMPLETE"
     )
 }
-
 @Composable
 fun WorkoutDifficultyScreen(
     onBack: () -> Unit,

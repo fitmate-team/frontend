@@ -1,14 +1,12 @@
-
 package com.fitmate.data.repository
 
 import com.fitmate.data.remote.api.WorkoutApi
+import com.fitmate.data.remote.api.CatalogApi
 import com.fitmate.data.remote.apiCall
 import com.fitmate.data.remote.dto.*
 import com.fitmate.domain.model.*
 import com.fitmate.domain.repository.WorkoutRepository
-import com.fitmate.data.remote.api.CatalogApi
 import javax.inject.Inject
-
 
 class WorkoutRepositoryImpl @Inject constructor(
     private val api: WorkoutApi,
@@ -25,7 +23,6 @@ class WorkoutRepositoryImpl @Inject constructor(
             api.getWorkoutEnvironments().toDomain()
         }
 
-
     override suspend fun getExerciseCatalog():
             Result<List<ExerciseCatalogItem>> = apiCall {
 
@@ -39,7 +36,6 @@ class WorkoutRepositoryImpl @Inject constructor(
             )
         }
     }
-
 
     override suspend fun validateWorkoutLocation(
         workoutEnvironmentId: Long
@@ -65,6 +61,7 @@ class WorkoutRepositoryImpl @Inject constructor(
         ).workoutRecordId
     }
 
+    // 운동 종료
     override suspend fun finishWorkout(
         request: FinishWorkout
     ): Result<Unit> = apiCall {
@@ -77,7 +74,9 @@ class WorkoutRepositoryImpl @Inject constructor(
                 actualRestSeconds = request.actualRestSeconds,
                 minHeartRate = request.minHeartRate,
                 maxHeartRate = request.maxHeartRate,
-                exercises = request.exercises.map { it.toDto() },
+                exercises = request.exercises.map {
+                    it.toDto()
+                },
                 perceivedDifficulty = request.perceivedDifficulty
             )
         )
@@ -110,20 +109,20 @@ class WorkoutRepositoryImpl @Inject constructor(
         )
     }
 
-
     override suspend fun getAvailableExercises(
         dailyRoutineId: Long
     ): Result<List<AvailableWorkoutExercise>> = apiCall {
-        api.getAvailableExercises(dailyRoutineId).exercises.map { exercise ->
-            AvailableWorkoutExercise(
-                exerciseId = exercise.exerciseId,
-                exerciseCode = exercise.exerciseCode,
-                nameKo = exercise.nameKo,
-                primaryMuscle = exercise.primaryMuscle,
-                equipmentCategories = exercise.equipmentCategories,
-                includedInDailyRoutine = exercise.includedInDailyRoutine
-            )
-        }
+        api.getAvailableExercises(dailyRoutineId)
+            .exercises.map { exercise ->
+                AvailableWorkoutExercise(
+                    exerciseId = exercise.exerciseId,
+                    exerciseCode = exercise.exerciseCode,
+                    nameKo = exercise.nameKo,
+                    primaryMuscle = exercise.primaryMuscle,
+                    equipmentCategories = exercise.equipmentCategories,
+                    includedInDailyRoutine = exercise.includedInDailyRoutine
+                )
+            }
     }
 
     override suspend fun getExerciseGuides(
@@ -146,7 +145,6 @@ class WorkoutRepositoryImpl @Inject constructor(
         }
     }
 
-
     override suspend fun updateDailyRoutineExercises(
         dailyRoutineId: Long,
         exercises: List<WorkoutExercise>
@@ -168,7 +166,20 @@ class WorkoutRepositoryImpl @Inject constructor(
         )
     }
 
-
+    override suspend fun getExercisesAvailableByEnvironment(
+        environmentId: Long
+    ): Result<List<ExerciseCatalogItem>> = apiCall {
+        api.getExercisesAvailableByEnvironment(environmentId)
+            .map { item ->
+                ExerciseCatalogItem(
+                    exerciseCode = item.exerciseCode,
+                    nameKo = item.nameKo,
+                    exerciseType = item.exerciseType,
+                    baselineRecordType = item.baselineRecordType,
+                    primaryMuscle = item.primaryMuscle
+                )
+            }
+    }
 }
 
 // DTO → Domain
@@ -187,8 +198,9 @@ private fun TodayWorkoutResponseDto.toDomain() = TodayWorkout(
     exercises = exercises.map { it.toDomain() }
 )
 
+// 오늘의 운동 상세 정보
 private fun TodayWorkoutExerciseDto.toDomain() = WorkoutExercise(
-    exerciseCode = "",
+    exerciseCode = exerciseCode,
     exerciseName = exerciseName,
     weightKg = weightKg,
     reps = reps,
@@ -197,7 +209,9 @@ private fun TodayWorkoutExerciseDto.toDomain() = WorkoutExercise(
     restSeconds = restSeconds,
     appliedAdjustmentId = null,
     weightRequired = weightRequired,
-    exerciseId = exerciseId
+    exerciseId = exerciseId,
+    routineExerciseId = routineExerciseId,
+    baselineRecordType = baselineRecordType
 )
 
 private fun WorkoutExerciseDto.toDomain() = WorkoutExercise(
@@ -210,6 +224,8 @@ private fun WorkoutExerciseDto.toDomain() = WorkoutExercise(
     appliedAdjustmentId = appliedAdjustmentId
 )
 
+// Domain → DTO
+
 private fun WorkoutExercise.toDto() = WorkoutExerciseDto(
     exerciseCode = exerciseCode,
     weightKg = weightKg,
@@ -220,17 +236,30 @@ private fun WorkoutExercise.toDto() = WorkoutExerciseDto(
     appliedAdjustmentId = appliedAdjustmentId
 )
 
-private fun WorkoutEnvironmentsResponseDto.toDomain() = WorkoutEnvironments(
-    scheduledEnvironmentId = scheduledEnvironmentId,
-    environments = environments.map {
-        WorkoutEnvironment(
-            id = it.id,
-            gymName = it.gymName,
-            locationType = it.locationType
-        )
-    }
-)
+// 운동 종료 전용 수행 기록 변환
+private fun FinishWorkoutExercise.toDto() =
+    FinishWorkoutExerciseDto(
+        routineExerciseId = routineExerciseId,
+        completedSetCount = completedSetCount,
+        completedDurationSeconds = completedDurationSeconds,
+        minHeartRate = minHeartRate,
+        maxHeartRate = maxHeartRate
+    )
 
+// 운동 환경 목록
+private fun WorkoutEnvironmentsResponseDto.toDomain() =
+    WorkoutEnvironments(
+        scheduledEnvironmentId = scheduledEnvironmentId,
+        environments = environments.map {
+            WorkoutEnvironment(
+                id = it.id,
+                gymName = it.gymName,
+                locationType = it.locationType
+            )
+        }
+    )
+
+// 운동 환경 변경 가능 여부
 private fun WorkoutLocationValidationResponseDto.toDomain() =
     WorkoutLocationValidation(
         workoutEnvironmentId = workoutEnvironmentId,
@@ -238,6 +267,7 @@ private fun WorkoutLocationValidationResponseDto.toDomain() =
         requiresRerecommendation = requiresRerecommendation
     )
 
+// AI 운동 강도 조정 추천
 private fun WorkoutAdjustmentResponseDto.toDomain() =
     WorkoutAdjustmentRecommendation(
         workoutRecordId = workoutRecordId,
@@ -266,5 +296,3 @@ private fun WorkoutAdjustmentValuesDto.toDomain() =
         setCount = setCount,
         durationSeconds = durationSeconds
     )
-
-

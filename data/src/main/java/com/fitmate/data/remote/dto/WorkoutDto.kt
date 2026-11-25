@@ -1,4 +1,3 @@
-
 package com.fitmate.data.remote.dto
 
 import kotlinx.serialization.Serializable
@@ -8,6 +7,7 @@ import kotlinx.serialization.Serializable
 data class TodayWorkoutExerciseDto(
     val routineExerciseId: Long,
     val exerciseId: Long,
+    val exerciseCode: String = "",
     val exerciseName: String,
     val exerciseOrder: Int,
     val exerciseType: String,
@@ -95,8 +95,18 @@ data class FinishWorkoutRequestDto(
     val actualRestSeconds: Long,
     val minHeartRate: Int? = null,
     val maxHeartRate: Int? = null,
-    val exercises: List<WorkoutExerciseDto>,
+    val exercises: List<FinishWorkoutExerciseDto>,
     val perceivedDifficulty: String
+)
+
+// 운동 종료 시 운동별 실제 수행 기록
+@Serializable
+data class FinishWorkoutExerciseDto(
+    val routineExerciseId: Long,
+    val completedSetCount: Int? = null,
+    val completedDurationSeconds: Int? = null,
+    val minHeartRate: Int? = null,
+    val maxHeartRate: Int? = null
 )
 
 // 운동별 AI 조정 추천
@@ -147,7 +157,6 @@ data class ApplyWorkoutAdjustmentExerciseDto(
     val apply: Boolean
 )
 
-
 // 데일리 루틴에서 선택 가능한 운동 목록
 @Serializable
 data class AvailableExercisesResponseDto(
@@ -175,8 +184,6 @@ data class ExerciseGuideResponseDto(
     val primaryMuscle: String
 )
 
-
-
 @Serializable
 data class UpdateDailyRoutineExercisesRequestDto(
     val exercises: List<UpdateDailyRoutineExerciseDto>
@@ -192,7 +199,6 @@ data class UpdateDailyRoutineExerciseDto(
     val restSeconds: Int? = null
 )
 
-
 @Serializable
 data class AvailableWorkoutExerciseDto(
     val exerciseId: Long,
@@ -206,4 +212,15 @@ data class WorkoutGuideDto(
     val videoUrl: String? = null,
     val guide: String? = null,
     val primaryMuscle: String? = null
+)
+
+// 운동 환경별 수행 가능한 운동 조회
+@Serializable
+data class EnvironmentAvailableExerciseDto(
+    val exerciseCode: String,
+    val nameKo: String,
+    val exerciseType: String,
+    val baselineRecordType: String,
+    val primaryMuscle: String,
+    val equipmentCategories: List<String> = emptyList()
 )
