@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.fitmate.domain.model.BaselineRecordType
 import com.fitmate.domain.model.ExerciseLocation
 import com.fitmate.domain.model.WorkoutDay
-import com.fitmate.domain.model.WorkoutEnvironment
+import com.fitmate.domain.model.MemberWorkoutEnvironment
 import com.fitmate.domain.repository.CatalogRepository
 import com.fitmate.domain.repository.MemberRepository
 import com.fitmate.domain.repository.RoutineRepository
@@ -19,16 +19,20 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.util.Calendar
 import javax.inject.Inject
 import kotlin.math.roundToInt
 import com.fitmate.domain.model.WeeklyRoutine as SavedWeeklyRoutine
+
 
 data class RoutineUiState(
     val isLoading: Boolean = true,
     val routine: WeeklyRoutine? = null,
     // 요일 문구("월")별 상세. 쉬는 날은 없다
     val dayDetails: Map<String, RoutineDayDetailUi> = emptyMap(),
-    val todayLabel: String = WorkoutDay.entries[LocalDate.now().dayOfWeek.ordinal].label(),
+    val todayLabel: String = WorkoutDay.entries[
+        (Calendar.getInstance().get(Calendar.DAY_OF_WEEK) + 5) % 7
+    ].label(),
     // 오늘의 운동 상단 장소 칩 (헬스장 이름 / 집 / 야외)
     val placeLabel: String = ""
 )
@@ -81,10 +85,13 @@ class RoutineViewModel @Inject constructor(
 }
 
 // 헬스장이면 헬스장 이름, 아니면 장소 이름
-internal fun WorkoutEnvironment.placeLabel(): String =
+internal fun MemberWorkoutEnvironment.placeLabel(): String =
     if (location == ExerciseLocation.GYM) gymName ?: location.label() else location.label()
 
-private fun SavedWeeklyRoutine.toUi(environment: WorkoutEnvironment?, difficulty: String?): WeeklyRoutine {
+private fun SavedWeeklyRoutine.toUi(
+    environment: MemberWorkoutEnvironment?,
+    difficulty: String?
+): WeeklyRoutine {
     val plans = days.associateBy { it.day }
     return WeeklyRoutine(
         place = environment?.location?.label() ?: "-",

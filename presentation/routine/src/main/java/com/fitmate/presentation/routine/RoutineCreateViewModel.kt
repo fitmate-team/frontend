@@ -9,7 +9,7 @@ import com.fitmate.domain.model.ExerciseLocation
 import com.fitmate.domain.model.MemberInfo
 import com.fitmate.domain.model.PrescriptionRecommendation
 import com.fitmate.domain.model.WeeklyRoutineRecommendation
-import com.fitmate.domain.model.WorkoutEnvironment
+import com.fitmate.domain.model.MemberWorkoutEnvironment
 import com.fitmate.domain.repository.CatalogRepository
 import com.fitmate.domain.repository.MemberRepository
 import com.fitmate.domain.repository.RoutineRepository
@@ -81,7 +81,7 @@ class RoutineCreateViewModel @Inject constructor(
     val events = _events.receiveAsFlow()
 
     private var member: MemberInfo? = null
-    private var environments: List<WorkoutEnvironment> = emptyList()
+    private var environments: List<MemberWorkoutEnvironment> = emptyList()
     private var catalog: Map<String, Exercise> = emptyMap()
 
     // 이번 주 루틴이 이미 있으면 새로 저장(POST) 대신 재생성 API로 덮어쓴다. 서버는 주간 루틴을 주에 하나만 받는다
